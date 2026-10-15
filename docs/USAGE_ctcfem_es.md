@@ -70,3 +70,23 @@ python -m ctcfem.cli analizar --config configs/completo.yaml             # 3) an
    `data/poblaciones.yaml: notas`).
 
 Detalle del método y fuentes: `docs/METODO.md`.
+
+## Robustez de la ejecución paralela (`src/ctcfem/ejecucion.py`)
+
+Soluciones trasladadas de T2D_landscape (`[FIX-threads]`, `[FIX-worker]`):
+
+| problema | solución | prueba |
+|---|---|---|
+| un `OMP_NUM_THREADS` heredado (p. ej. de `.bashrc`) hacía que N workers × M hilos sobresuscribieran la máquina | 1 hilo **forzado** en la CLI y **dentro de cada worker** con `threadpoolctl` | `test_un_hilo_por_worker_aunque_el_entorno_herede_otro_valor` |
+| si el sistema mata un worker (OOM killer, fallo nativo) un `Pool` se cuelga para siempre | `ProcessPoolExecutor`: se detecta, se recrea el pool y las tareas en vuelo se reintentan **aisladas**; solo la culpable se registra como error | `test_worker_muerto_y_tarea_colgada_no_cuelgan_el_lote` |
+| una tarea desbocada | límite de tiempo (`timeout_tarea_s`) y de memoria por worker (`limite_memoria_gb`, RLIMIT_DATA) | ídem |
+| fallo del entorno que mata a todos los workers | se **aborta** sin marcar tareas (`FalloSistematico`) | `test_fallo_sistematico_aborta_sin_marcar_tareas` |
+| poca memoria libre | se pausa el envío por debajo de `memoria_minima_libre_gb`; workers limitados por CPU y memoria | — |
+
+Cada crudo guarda `diag.hilos_os` y `diag.rss_pico_MB`. Para comprobar en el servidor que no hubo sobresuscripción:
+
+```bash
+python -c "import json,glob;d=[json.load(open(f)).get('diag',{}) for f in glob.glob('resultados/completo/crudos/*.json')];print('hilos',sorted({x.get('hilos_os') for x in d}),'RSS max MB',max(x.get('rss_pico_MB',0) for x in d))"
+```
+
+Reintentar las tareas que fallaron: `python -m ctcfem.cli correr --config configs/completo.yaml --reintentar-errores`.

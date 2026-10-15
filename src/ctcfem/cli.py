@@ -6,9 +6,8 @@ ordenes:
   correr      ejecuta (reanuda si se interrumpio)  [--workers N] [--limite N]
   analizar    agrega crudos -> tablas, ventanas, informe 8/10/12 um y figuras
 """
-import os
-for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
-    os.environ.setdefault(v, "1")        # 1 hilo por proceso: 40 procesos = 40 nucleos, sin sobresuscripcion
+from .ejecucion import forzar_un_hilo
+forzar_un_hilo()   # [FIX-threads] FORZADO (no setdefault): un OMP_NUM_THREADS heredado sobresuscribia la maquina
 import argparse
 from . import corrida as C
 from . import analisis as A
@@ -20,6 +19,8 @@ def main(argv=None):
     ap.add_argument("--config", required=True)
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--limite", type=int, default=None)
+    ap.add_argument("--reintentar-errores", action="store_true",
+                    help="borra los crudos con estado error y los vuelve a calcular")
     a = ap.parse_args(argv)
     cfg = C.cargar_config(a.config)
     if a.orden == "muestrear":
@@ -33,6 +34,13 @@ def main(argv=None):
         for s in (30, 120, 400):
             print(f"  si cada tarea FEM tarda {s:4d} s -> {len(fem)*s/w/3600:6.1f} h con {w} procesos")
     elif a.orden == "correr":
+        if a.reintentar_errores:
+            import json, pathlib
+            cr = pathlib.Path(C.dir_salida(cfg)) / "crudos"; nb = 0
+            for f in cr.glob("*.json"):
+                if json.loads(f.read_text(encoding="utf-8")).get("estado") == "error":
+                    f.unlink(); nb += 1
+            print(f"{nb} tareas con error se volveran a calcular")
         n, err = C.correr(cfg, workers=a.workers, limite=a.limite); print(f"hechas {n}, errores {err}")
     elif a.orden == "analizar":
         T, R, V = A.analizar(cfg, C.RAIZ); print(f"filas {len(T)}; ver {cfg['salida']}/analisis/")

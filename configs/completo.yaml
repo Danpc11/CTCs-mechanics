@@ -24,4 +24,12 @@ modelo:
   usar_gamma: false         # true = tension cortical en el FEM (rompe la calibracion K_E)
   pared_compliante: true    # rigidez de pared del material en serie con la penalizacion
 reduccion: {l_factor: 1.0}
-ejecucion: {workers: 40, tareas_por_proceso: 25}
+ejecucion:
+  workers: 20
+  tareas_por_proceso: 25
+  timeout_tarea_s: 3600          # una tarea que tarde mas se registra como error y se salta
+  limite_memoria_gb: 4.0         # por worker (RLIMIT_DATA); la tarea mas pesada medida usa ~0.2 GB
+  mem_por_tarea_gb: 1.0          # para limitar workers por memoria disponible
+  reserva_memoria_gb: 8.0        # memoria que nunca se asigna a workers
+  memoria_minima_libre_gb: 8.0   # por debajo, se pausa el envio de tareas
+  nice: 0

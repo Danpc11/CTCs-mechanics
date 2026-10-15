@@ -9,7 +9,7 @@ H = pathlib.Path(__file__).resolve().parent
 R = H.parent
 pob = yaml.safe_load((R / 'data' / 'poblaciones.yaml').read_text(encoding='utf-8'))
 NOMBRES = {'neutrofilo': 'Neutrófilo', 'linfocito': 'Linfocito', 'monocito': 'Monocito', 'eosinofilo': 'Eosinófilo',
-           'basofilo': 'Basófilo'}
+           'basofilo': 'Basófilo', 'CTC_mama_paciente': 'CTC de mama (paciente)'}
 def m(s): return s['valor'] if s['dist'] == 'fijo' else s['media']
 fen = []
 for k, p in pob['poblaciones'].items():

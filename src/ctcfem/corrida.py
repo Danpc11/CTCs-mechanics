@@ -21,6 +21,7 @@ from . import poblaciones as P
 from . import geometria as G
 from . import reduccion as RD
 from .modelo_celula import cerrar_apertura, CONF_EF_VALIDADO
+from . import ejecucion as E
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -122,6 +123,9 @@ def ejecutar_tarea(t, dir_crudos):
             filas.append(fila)
         rec["aperturas"] = filas
         rec["estado"] = "ok"
+        import resource as _r
+        from .ejecucion import hilos_del_proceso
+        rec["diag"] = dict(hilos_os=hilos_del_proceso(), rss_pico_MB=round(_r.getrusage(_r.RUSAGE_SELF).ru_maxrss / 1024))
     except Exception as exc:                                   # se registra, no se oculta
         rec["estado"] = "error"
         rec["error"] = repr(exc)[:500]
@@ -163,24 +167,39 @@ def correr(cfg, workers=None, limite=None):
     _manifest(cfg, d, len(ts))
     hechas = {p.stem for p in (d / "crudos").glob("*.json")}
     pend = [t for t in ts if t["id"] not in hechas]
-    w = int(workers or cfg["ejecucion"]["workers"])
+    ej = cfg["ejecucion"]
     log = open(d / "logs" / "progreso.log", "a", encoding="utf-8")
-    log.write(f"{time.ctime()}  tareas={len(ts)} pendientes={len(pend)} workers={w}\n"); log.flush()
+    def L(msg):
+        log.write(f"{time.ctime()}  {msg}\n"); log.flush(); print(msg, flush=True)
+    w = E.workers_seguros(int(workers or ej["workers"]), float(ej.get("mem_por_tarea_gb", 1.0)),
+                          float(ej.get("reserva_memoria_gb", 8.0)), log=L)
+    L(f"tareas={len(ts)} pendientes={len(pend)} workers={w} hilos_por_worker=1 "
+      f"timeout={ej.get('timeout_tarea_s', 3600)}s limite_mem={ej.get('limite_memoria_gb', 4.0)}GB")
+    crudos = str(d / "crudos")
+
+    def al_morir(tid, arg, motivo):
+        t = arg[0]
+        rec = dict(id=tid, dispositivo=t["dispositivo"], material=t["disp"]["material"], tipo=t["disp"]["tipo"],
+                   poblacion=t["celula"]["poblacion"], grupo=t["celula"]["grupo"], muestra=int(t["celula"]["muestra"]),
+                   celula=t["celula"], estado="error", error=motivo)
+        p = Path(crudos) / f"{tid}.json"; tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(rec, default=float), encoding="utf-8"); os.replace(tmp, p)
+
     t0, n, err = time.time(), 0, 0
-    args = [(t, str(d / "crudos")) for t in pend]
-    if w <= 1:
-        it = map(_worker, args)
-        pool = None
-    else:
-        pool = mp.get_context("fork").Pool(w, maxtasksperchild=int(cfg["ejecucion"].get("tareas_por_proceso", 25)))
-        it = pool.imap_unordered(_worker, args, chunksize=1)
-    for tid, est in it:
-        n += 1; err += est == "error"
+    items = ((t["id"], (t, crudos)) for t in pend)
+    gen = (map(lambda it: (it[0], _worker(it[1])), items) if w <= 1 else
+           E.ejecutar_lote(items, _worker, w, timeout_s=float(ej.get("timeout_tarea_s", 3600)),
+                           limite_mem_gb=float(ej.get("limite_memoria_gb", 4.0)), nice=int(ej.get("nice", 0)),
+                           min_libre_gb=float(ej.get("memoria_minima_libre_gb", 4.0)),
+                           tareas_por_proceso=int(ej.get("tareas_por_proceso", 25)), al_morir=al_morir, log=L))
+    for tid, res in gen:
+        n += 1
+        est = res[1] if isinstance(res, tuple) and len(res) == 2 and res[0] == tid else (res[0] if isinstance(res, tuple) else res)
+        err += est in ("error", "muerto")
         if n % 10 == 0 or n == len(pend):
             el = time.time() - t0
-            log.write(f"{time.ctime()}  {n}/{len(pend)}  errores={err}  {el/60:.1f} min  "
-                      f"ETA {el/n*(len(pend)-n)/60:.1f} min\n"); log.flush()
-    if pool:
-        pool.close(); pool.join()
-    log.write(f"{time.ctime()}  fin  hechas={n} errores={err}\n"); log.close()
+            L(f"{n}/{len(pend)}  errores={err}  {el/60:.1f} min  ETA {el/n*(len(pend)-n)/60:.1f} min  "
+              f"memoria libre {E.memoria_disponible_gb():.0f} GB")
+    L(f"fin  hechas={n} errores={err}")
+    log.close()
     return n, err

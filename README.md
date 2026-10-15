@@ -12,7 +12,7 @@ lines and leucocytes. It is not a validated device.
 
 | folder | what it is |
 |---|---|
-| `manuscript_analysis/` | The analysis behind every number of the manuscript: verified solver (`01_solver`), parameter table with provenance (`02_parametros`), constriction/DLD/rate analysis (`03_modalidades`), per-population Sobol (`04_correcciones`), figures (`05_figuras`), chip hydraulics (`06_hidraulica_chip`), **corrected reduction to critical pressure and re-run FEM data** (`07_correccion_reduccion`), all tables (`datos/`) and audit reports (`informes/`). |
+| `manuscript_analysis/` | The analysis behind every number of the manuscript: verified solver (`01_solver`), parameter table with provenance (`02_parametros`), constriction/DLD/rate analysis (`03_modalidades`), per-population Sobol (`04_correcciones`), figures (`05_figuras`), chip hydraulics (`06_hidraulica_chip`), **corrected reduction to critical pressure and re-run FEM data** (`07_correccion_reduccion`), size selection with **patient-derived CTC diameters** (`08_ctc_paciente`), all tables (`datos/`) and audit reports (`informes/`). |
 | `src/ctcfem/` | Reproducible package for population and device runs (primary leucocyte subpopulations, membranes and channels, apertures 5–15 µm), with resumable parallel execution and a run manifest. |
 | `data/` | Population distributions and device/material database, every entry with status (measured / transferred / declared) and source. |
 | `webapp/` | Self-contained web app: entry pressure and a schematic of passage for any phenotype (`webapp/index.html`). |
@@ -35,6 +35,7 @@ Full population run on a workstation (40 cores): `bash scripts/correr_servidor.s
 * The Skalak parameter follows `Ks = (1 + 2C) Gs`, as implemented in `solver_axisimetrico.py`.
 * Absolute critical pressures depend on the neck shape (corner vs smooth neck, 1.6–2.1×); ratios do not (< 5 %).
 * Results above an effective confinement of 1.636 are extrapolation.
+* Mechanical parameters are those of cultured cell lines. Patient-derived breast CTCs are smaller (median 12.4 µm on CellSearch, Mendelaar et al. 2021); `data/poblaciones.yaml` includes them as `CTC_mama_paciente`, with a transferred, unmeasured apparent modulus.
 
 ## Citation
 

@@ -4,7 +4,7 @@
 # Sobrevive al cierre de la sesion SSH (nohup + setsid). Reanuda si se vuelve a lanzar.
 set -euo pipefail
 CFG="${1:-configs/completo.yaml}"
-W="${2:-40}"
+W="${2:-20}"
 cd "$(dirname "$0")/.."
 export PYTHONPATH="$PWD/src"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
