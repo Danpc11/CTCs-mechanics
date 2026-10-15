@@ -1,0 +1,99 @@
+# =============================================================================
+# Materiales de pared y familias de dispositivo.
+#
+# Como entra el material en el modelo (y como NO entra):
+#   1. GEOMETRIA: espesor de membrana, radio de borde del poro, longitud de
+#      garganta.  Es el efecto dominante.
+#   2. RIGIDEZ DE PARED: penalizacion de contacto en serie con la de la pared
+#      (Winkler, k_w = E/((1-nu^2) l_w), l_w declarado = espesor de membrana o
+#      radio celular).  Comprobado con MCF-7 en canal a 12 um: PMMA/PC/PET
+#      < 0.01 % frente a pared rigida; PDMS -3.5 % en W y -4 % en dP_crit.
+#   3. HIDRAULICA: densidad de poros y espesor fijan beta (presion por unidad
+#      de velocidad en la garganta).
+#   NO modelado: adhesion / friccion (PDMS es hidrofobo), rugosidad, deformacion
+#   del canal de PDMS bajo presion.
+# =============================================================================
+
+version: 1
+
+materiales:
+  PC:
+    nombre: policarbonato
+    E_GPa: {nominal: 2.3, rango: [2.0, 2.6]}
+    nu: 0.37
+    fuente: "2.0-2.4 GPa (tabla 1, Chem Soc Rev 2011, doi:10.1039/c0cs00138d); 2.6 GPa (Biomicrofluidics 2017, doi:10.1063/1.4998604)"
+    nu_estado: declarado
+  PET:
+    nombre: polietileno tereftalato
+    E_GPa: {nominal: 2.35, rango: [2.0, 2.7]}
+    nu: 0.40
+    fuente: "2.0-2.7 GPa (Chem Soc Rev 2011; Biomicrofluidics 2017)"
+    nu_estado: declarado
+  PMMA:
+    nombre: polimetilmetacrilato
+    E_GPa: {nominal: 2.9, rango: [1.8, 3.4]}
+    nu: 0.37
+    fuente: "1.8-3.1 GPa (Chem Soc Rev 2011); 2.4-3.4 GPa (Biomicrofluidics 2017)"
+    nu_estado: declarado
+  PDMS:
+    nombre: polidimetilsiloxano (Sylgard 184, 10:1)
+    E_GPa: {nominal: 0.00200, rango: [0.00132, 0.00297]}
+    nu: 0.49
+    fuente: "1.32-2.97 MPa segun temperatura de curado (Johnston et al. 2014, J Micromech Microeng 24:035017, doi:10.1088/0960-1317/24/3/035017)"
+    nu_estado: declarado
+
+# Familias de dispositivo.  El perfil de pared es SIEMPRE el perfil suave par
+#   R_w(z) = R_n + (R_ext - R_n) * h(z),
+#   h(z) = (g(z) - g(0)) / (1 - g(0)),  g(z) = 1 + [tanh((z - z_t)/L) - tanh((z + z_t)/L)]/2
+# que alcanza EXACTAMENTE el radio de apertura R_n en z = 0 (sin confinamiento
+# "nominal") y no tiene quiebre.  Membrana: z_t = espesor/2, L = radio de borde.
+# Canal: z_t = semilongitud de garganta, L = longitud de transicion.
+dispositivos:
+
+  membrana_PC:
+    tipo: membrana
+    material: PC
+    fabricacion: track-etched (poros cilindricos de tamano definido; disponibles 5, 8, 10, 12 um)
+    espesor_um: {nominal: 10.0, rango: [7.0, 25.0], estado: declarado,
+                 fuente: "10 um en el chip del grupo (06_hidraulica_chip); el fabricante no publica el espesor en la ficha recuperada"}
+    radio_borde_um: {nominal: 1.0, rango: [0.5, 2.0], estado: declarado}
+    densidad_poros_cm2: {nominal: 1.0e5, estado: declarado, fuente: "chip del grupo"}
+    R_ext_um: 25.0
+    fuente_poros: "Whatman Nuclepore track-etched PC, poros 5/8/10/12 um (Cytiva)"
+
+  membrana_PET:
+    tipo: membrana
+    material: PET
+    fabricacion: track-etched
+    espesor_um: {nominal: 12.0, rango: [10.0, 25.0], estado: declarado, fuente: "no recuperado"}
+    radio_borde_um: {nominal: 1.0, rango: [0.5, 2.0], estado: declarado}
+    densidad_poros_cm2: {nominal: 6.0e4, estado: medido,
+                         fuente: "PET 8 um, 0.06e6 poros/cm2 (Millicell PCEP, Merck Millipore)"}
+    R_ext_um: 25.0
+
+  membrana_PDMS:
+    tipo: membrana
+    material: PDMS
+    fabricacion: litografia blanda (poros moldeados)
+    espesor_um: {nominal: 20.0, rango: [10.0, 50.0], estado: declarado}
+    radio_borde_um: {nominal: 2.0, rango: [1.0, 4.0], estado: declarado}
+    densidad_poros_cm2: {nominal: 1.0e5, estado: declarado}
+    R_ext_um: 25.0
+
+  canal_PDMS:
+    tipo: canal
+    material: PDMS
+    fabricacion: litografia blanda; constriccion axisimetrica equivalente
+    semilongitud_garganta_um: {nominal: 5.0, rango: [2.0, 10.0], estado: declarado}
+    transicion_um: {nominal: 5.0, rango: [2.5, 12.0], estado: declarado,
+                    fuente: "geometria de referencia del manuscrito (L_tap = 5 um)"}
+    R_ext_um: 15.0
+    seccion_equivalente: "radio hidraulico de un canal rectangular; declarado"
+
+  canal_PMMA:
+    tipo: canal
+    material: PMMA
+    fabricacion: micromaquinado / estampado en caliente (bordes mas redondeados)
+    semilongitud_garganta_um: {nominal: 5.0, rango: [2.0, 10.0], estado: declarado}
+    transicion_um: {nominal: 10.0, rango: [5.0, 20.0], estado: declarado}
+    R_ext_um: 15.0

@@ -1,0 +1,11 @@
+# Prueba de humo (~5-15 min en 1 nucleo). Debe pasar antes de lanzar la corrida completa.
+nombre: prueba_rapida
+semilla: 20261015
+salida: resultados/prueba_rapida
+datos: {poblaciones: data/poblaciones.yaml, materiales: data/materiales.yaml}
+poblaciones: {neutrofilo: 2, linfocito: 1, MCF-7: 1}
+dispositivos: [membrana_PC, canal_PDMS]
+aperturas_um: {inicio: 10.0, fin: 15.0, paso: 1.0, extra: [12.0]}
+modelo: {hrel: 10.0, kn_f: 200.0, conf_max_intento: 1.8, usar_gamma: false, pared_compliante: true}
+reduccion: {l_factor: 1.0}
+ejecucion: {workers: 1, tareas_por_proceso: 25}

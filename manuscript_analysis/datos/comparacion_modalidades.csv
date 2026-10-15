@@ -1,0 +1,4 @@
+modalidad,selectividad_mediana,p5,p95,ventana_presion_dispositivo,rendimiento_en_optimo,arrastre_leucocitario,dentro_de_envolvente,depende_de_parametros_transferidos
+Constricción (trampa de deformabilidad),4.4,2.98,6.42,165× (vs MDA-MB-231) a 1644× (vs MCF-7),1.0,<1e-7,"sí (1,20 ≤ 2a/D ≤ 2,43)",no (S_T ≈ 1e-20)
+Microfiltro de poros,4.06,2.77,5.85,2.63–4.62× en los 14 diámetros,1.0,<1e-7,"sí (poros 7,5–14,0 µm)",no (S_T ≈ 1e-20)
+DLD (desplazamiento lateral determinista),,,,no aplica: criterio geométrico,,no separable,no (opera sin contacto),"descartado: brecha 1,4–2,8% frente a 10% de resolución de D_c"

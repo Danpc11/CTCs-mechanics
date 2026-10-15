@@ -1,0 +1,158 @@
+{
+ "problema": {
+  "num_vars": 17,
+  "names": [
+   "an_a_tum",
+   "an_a_leu",
+   "C_tum",
+   "C_leu",
+   "Pi_tum",
+   "Pi_leu",
+   "r_nuc_tum",
+   "r_nuc_leu",
+   "r_env_tum",
+   "r_env_leu",
+   "E_app_tum",
+   "E_app_leu",
+   "a_tum",
+   "a_leu",
+   "tau_tum",
+   "tau_leu",
+   "ell_factor"
+  ],
+  "bounds": [
+   [
+    0.4,
+    0.6
+   ],
+   [
+    0.625,
+    0.763
+   ],
+   [
+    2.4,
+    37.0
+   ],
+   [
+    2.4,
+    37.0
+   ],
+   [
+    0.032,
+    0.078
+   ],
+   [
+    0.113,
+    0.211
+   ],
+   [
+    1.4,
+    4.0
+   ],
+   [
+    1.4,
+    4.0
+   ],
+   [
+    2.0,
+    8.0
+   ],
+   [
+    2.0,
+    8.0
+   ],
+   [
+    1.527,
+    2.772
+   ],
+   [
+    0.38,
+    0.66
+   ],
+   [
+    8.51,
+    10.0
+   ],
+   [
+    3.025,
+    4.395
+   ],
+   [
+    0.37,
+    3.76
+   ],
+   [
+    0.008575,
+    3.23
+   ],
+   [
+    0.5,
+    2.0
+   ]
+  ],
+  "sample_scaled": true
+ },
+ "n_muestras": 38912,
+ "diagnostico_sustituto": {
+  "n": 473,
+  "err_mediano_holdout": 0.035488339639032196,
+  "err_p90_holdout": 0.156362334615147,
+  "err_max_holdout": 0.27340354419653834,
+  "R2": 0.9979428439448168
+ },
+ "conclusiones": {
+  "la tumoral exige mas presion que el leucocito": 1.0,
+  "selectividad > 2x": 0.9983552631578947,
+  "selectividad > 4x": 0.806383634868421,
+  "microfiltro retiene tumoral y deja pasar leucocito": 0.988024259868421,
+  "ventana de microfiltro > 2x": 0.5769942434210527,
+  "existe ventana de operacion beta_c(tum) > beta_c(leu)": 0.978284333881579,
+  "ventana de presion de dispositivo > 10x": 0.36312705592105265,
+  "el cortex es el limitante (>50% del margen)": 0.8478361430921053,
+  "los compartimentos nucleares aportan <10%": 1.0
+ },
+ "percentiles": {
+  "dP_critica_tumoral_kPa": {
+   "p5": 0.08859213458012141,
+   "p50": 0.1358021874333374,
+   "p95": 0.19564798826030852,
+   "media": 0.13827432622804553
+  },
+  "dP_critica_leucocito_kPa": {
+   "p5": 0.01625813587474016,
+   "p50": 0.02497299197577008,
+   "p95": 0.037336741620143915,
+   "media": 0.025604362808483362
+  },
+  "selectividad_constriccion_tumoral_sobre_leucocito": {
+   "p5": 3.059639562210239,
+   "p50": 5.39964095580991,
+   "p95": 9.671733269190334,
+   "media": 5.756224550555271
+  },
+  "razon_beta_c_tumoral_sobre_leucocito": {
+   "p5": 1.443006154581779,
+   "p50": 7.029634219391536,
+   "p95": 70.77678223666413,
+   "media": 21.799016165637823
+  },
+  "selectividad_microfiltro": {
+   "p5": 1.2168106477634077,
+   "p50": 2.137460030560332,
+   "p95": 3.7146530002967806,
+   "media": 2.257597806214822
+  },
+  "fraccion_marginal_cortex": {
+   "p5": 0.45429618361118385,
+   "p50": 0.5902783363408539,
+   "p95": 0.7156968469857391,
+   "media": 0.5882887527158748
+  },
+  "fraccion_marginal_nuclear": {
+   "p5": 0.003212933136449843,
+   "p50": 0.012490210166183346,
+   "p95": 0.037909925221572265,
+   "media": 0.015676650313502336
+  }
+ }
+}

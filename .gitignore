@@ -1,0 +1,7 @@
+resultados/
+manuscript_analysis/05_figuras/salida/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.tmp
+.DS_Store

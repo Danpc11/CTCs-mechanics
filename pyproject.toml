@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ctcfem"
+version = "0.1.0"
+description = "Celula multicompartimento axisimetrica en constricciones y membranas (captura de CTC)"
+requires-python = ">=3.11,<3.13"
+dependencies = []          # el entorno se fija con environment.yml / requirements.txt
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below and cite the accompanying article."
+title: "CTCs-mechanics: multi-compartment finite-element model of the entry of circulating tumour cells into constrictions"
+abstract: >-
+  Code and data accompanying the manuscript "Cortical resistance and entry geometry govern the entry
+  pressure of circulating tumour cells". Axisymmetric finite-strain multi-compartment cell model
+  (Skalak cortex, near-incompressible neo-Hookean cytoplasm, nuclear envelope and nucleoplasm), the
+  corrected reduction to critical entry pressure, the global sensitivity analysis, a reproducible
+  population and device pipeline, and an interactive web app.
+type: software
+version: 0.1.0
+date-released: 2026-10-15
+repository-code: "https://github.com/Danpc11/CTCs-mechanics"
+keywords: [circulating tumour cells, cell mechanics, finite element, microfluidics, cortex]
+authors:
+  - family-names: "Pérez-Calixto"
+    given-names: "Daniel"
+    affiliation: "Instituto Nacional de Medicina Genómica (INMEGEN), Mexico City, Mexico"
+  - family-names: "Vazquez-Victorio"
+    given-names: "Genaro"
+    affiliation: "Facultad de Ciencias, Universidad Nacional Autónoma de México, Mexico City, Mexico"
+  - family-names: "Escutia-Guadarrama"
+    given-names: "Lidia"
+    affiliation: "Facultad de Química, Universidad Nacional Autónoma de México, Mexico City, Mexico"

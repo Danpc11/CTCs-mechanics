@@ -1,0 +1,9 @@
+# Entorno EXACTO con el que se verifico el paquete (Python 3.12.3, Ubuntu 24.04).
+# conda env create -f environment.yml && conda activate ctcfem
+name: ctcfem
+channels: [conda-forge]
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - -r requirements.txt

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paso de una célula por un poro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#1d2430; --ink2:#4d5868; --line:#d5dbe3;
+  --field-a:#fbfcf7; --field-b:#dfe4dc; --wall:#8a93a0; --wall-edge:#5d6672;
+  --eosin:#e9a3b8; --eosin-edge:#b8577a; --hema:#5b4a9b; --hema-edge:#3b2f70;
+  --leu:#b9b2e3; --leu-edge:#6a5fb0; --accent:#2f6f8f; --ok:#2e7d4f; --warn:#a35a00; --bad:#b3263e;
+  --tumour-line:#c2416b; --leu-line:#5d54a8; --sel-line:#1d2430;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11151b; --panel:#1a2029; --ink:#e7ebf0; --ink2:#a6b0bd; --line:#2d3643;
+    --field-a:#1d2620; --field-b:#0d110e; --wall:#5f6977; --wall-edge:#8a93a0;
+    --eosin:#c9708f; --eosin-edge:#f0a9c0; --hema:#8b7fd6; --hema-edge:#c4bbf5;
+    --leu:#6f66b8; --leu-edge:#b6aef0; --accent:#6fb3d4; --ok:#5fc48a; --warn:#e3a14a; --bad:#ef6b80;
+    --tumour-line:#ef7fa3; --leu-line:#a59cf0; --sel-line:#e7ebf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11151b; --panel:#1a2029; --ink:#e7ebf0; --ink2:#a6b0bd; --line:#2d3643;
+  --field-a:#1d2620; --field-b:#0d110e; --wall:#5f6977; --wall-edge:#8a93a0;
+  --eosin:#c9708f; --eosin-edge:#f0a9c0; --hema:#8b7fd6; --hema-edge:#c4bbf5;
+  --leu:#6f66b8; --leu-edge:#b6aef0; --accent:#6fb3d4; --ok:#5fc48a; --warn:#e3a14a; --bad:#ef6b80;
+  --tumour-line:#ef7fa3; --leu-line:#a59cf0; --sel-line:#e7ebf0; color-scheme: dark;
+}
+:root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+body{ margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size:15px; line-height:1.5; }
+.mono{ font-family:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+main{ max-width:1180px; margin:0 auto; padding:20px 18px 40px; }
+h1{ font-size:1.65rem; font-weight:600; letter-spacing:-0.01em; margin:4px 0 4px; }
+.lede{ color:var(--ink2); max-width:72ch; margin:0 0 18px; }
+.grid{ display:grid; grid-template-columns: 320px 1fr; gap:18px; align-items:start; }
+@media (max-width: 860px){ .grid{ grid-template-columns:1fr; } }
+.panel{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+.field{ margin-bottom:14px; }
+label{ display:block; font-size:.86rem; color:var(--ink2); margin-bottom:4px; }
+select, input[type=number]{ width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:7px 8px; }
+input[type=range]{ width:100%; accent-color:var(--accent); }
+.row{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.val{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.9rem; }
+.params{ display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
+.src{ font-size:.78rem; color:var(--ink2); margin-top:6px; }
+.view{ position:relative; border-radius:10px; overflow:hidden; border:1px solid var(--line); background:var(--field-b); }
+canvas{ display:block; width:100%; }
+#scope{ aspect-ratio: 16/8; }
+.hud{ position:absolute; left:12px; top:10px; font-size:.82rem; color:var(--ink2); }
+.controls{ display:flex; gap:8px; margin:10px 0 14px; flex-wrap:wrap; }
+button{ font:inherit; font-weight:500; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:6px; padding:7px 14px; cursor:pointer; }
+button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:14px; }
+.metric{ border-left:3px solid var(--line); padding:2px 10px; }
+.metric .k{ font-size:.8rem; color:var(--ink2); }
+.metric .v{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:1.15rem; }
+.verdict{ font-weight:600; font-size:1.05rem; padding:8px 12px; border-radius:6px; margin-bottom:12px; }
+.verdict.pass{ color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, transparent); }
+.verdict.stop{ color:var(--bad); background:color-mix(in srgb, var(--bad) 12%, transparent); }
+.verdict.free{ color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
+.flag{ font-size:.85rem; margin:0 0 10px; }
+.flag.warn{ color:var(--warn); } .flag.bad{ color:var(--bad); } .flag.ok{ color:var(--ok); }
+#chart{ aspect-ratio: 16/7; background:var(--panel); }
+.legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:.82rem; color:var(--ink2); margin-top:6px; }
+.sw{ display:inline-block; width:18px; height:3px; vertical-align:middle; margin-right:6px; }
+section.notes{ margin-top:22px; max-width:78ch; color:var(--ink2); font-size:.92rem; }
+section.notes h2{ color:var(--ink); font-size:1.05rem; font-weight:600; margin:18px 0 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Paso de una célula por un poro</h1>
+  <p class="lede">Elige un fenotipo, un dispositivo y una apertura. La presión crítica sale del modelo de elementos finitos multicompartimento de <span class="mono">ctcfem</span>, reducido con el colapso verificado <i>W</i> = <i>G</i><sub>s</sub><i>a</i>²<i>g</i>(<i>ρ</i>/<i>a</i>). La animación es un esquema de conservación de volumen, no la forma calculada.</p>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="field"><label for="fen">Fenotipo</label><select id="fen"></select>
+        <div class="src" id="fuente"></div></div>
+      <div class="params">
+        <div><label for="D">Diámetro (µm)</label><input type="number" id="D" step="0.1" min="4" max="30"></div>
+        <div><label for="E">E<sub>app</sub> (kPa)</label><input type="number" id="E" step="0.01" min="0.05" max="20"></div>
+        <div><label for="gam">γ (pN/µm)</label><input type="number" id="gam" step="1" min="0" max="500"></div>
+        <div><label for="tau">τ (s)</label><input type="number" id="tau" step="0.001" min="0" max="20"></div>
+      </div>
+      <div class="field" style="margin-top:14px"><label for="dev">Dispositivo</label><select id="dev"></select></div>
+      <div class="field"><div class="row"><label for="ap">Diámetro de apertura</label><span class="val" id="apv"></span></div>
+        <input type="range" id="ap" min="5" max="15" step="0.5" value="12"></div>
+      <div class="field"><div class="row"><label for="pr">Presión aplicada</label><span class="val" id="prv"></span></div>
+        <input type="range" id="pr" min="-3" max="2" step="0.01" value="0"></div>
+    </div>
+
+    <div>
+      <div class="view"><canvas id="scope"></canvas><div class="hud" id="hud"></div></div>
+      <div class="controls"><button class="primary" id="play">Reproducir</button><button id="reset">Reiniciar</button></div>
+      <div class="verdict" id="verdict"></div>
+      <p class="flag" id="flag"></p>
+      <div class="readout">
+        <div class="metric"><div class="k">Presión crítica (FEM reducido)</div><div class="v" id="pc"></div></div>
+        <div class="metric"><div class="k">Cota de gota líquida</div><div class="v" id="pg"></div></div>
+        <div class="metric"><div class="k">Confinamiento <i>a</i>/<i>R</i></div><div class="v" id="cf"></div></div>
+        <div class="metric"><div class="k">Umbral de dispositivo β<sub>c</sub></div><div class="v" id="bc"></div></div>
+      </div>
+      <div class="view"><canvas id="chart"></canvas></div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--sel-line)"></span>fenotipo elegido</span>
+        <span><span class="sw" style="background:var(--leu-line)"></span>neutrófilo</span>
+        <span><span class="sw" style="background:var(--tumour-line)"></span>MCF-7</span>
+        <span><span class="sw" style="background:var(--accent)"></span>presión aplicada</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="notes">
+    <h2>Cómo se calcula</h2>
+    <p>Para cada dispositivo se cerró la apertura sobre una célula MCF-7 con el solver axisimétrico verificado y se tabuló la energía normalizada <i>g</i>(<i>ρ</i>/<i>a</i>) = <i>W</i>/(<i>G</i><sub>s</sub><i>a</i>²) desde el primer contacto hasta <i>a</i>/<i>R</i> = 2.4. Para otro fenotipo, <i>G</i><sub>s</sub> = <i>E</i><sub>app</sub><i>a</i>/2.608 (calibración del córtex). En canales se usa la reducción axial indexada por el cuello; en membranas, el trabajo sobre el volumen que entra al poro. La cota de gota líquida, 2γ(1/<i>R</i> − 1/<i>a</i>), es independiente del FEM.</p>
+    <h2>Qué no hace</h2>
+    <p>El colapso se verificó entre líneas tumorales con la misma razón núcleo/célula; para fenotipos con núcleo mayor (linfocitos, blastos) es una aproximación declarada. Por encima de <i>a</i>/<i>R</i> = 1.636 el resultado es extrapolación, y por encima de 2.4 no se calcula. No hay fluido resuelto, adhesión ni fricción. Para una cifra definitiva se corre el FEM completo en el servidor.</p>
+    <h2>Cómo añadir un tipo celular</h2>
+    <p>Se añade una entrada en <span class="mono">data/poblaciones.yaml</span> con diámetro, razón núcleo/célula, <i>E</i><sub>app</sub> en suspensión, tensión cortical y τ, cada uno con su estado (medido, transferido o declarado) y su fuente, y se ejecuta <span class="mono">python webapp/exportar_web.py</span>.</p>
+  </section>
+</main>
+
+<script>
+const DATOS = __DATOS__;
+__NUCLEO__
+
+// ---------------------------------------------------------------- estado
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const KE = DATOS.K_E, ENV = 1.636;
+const curvas = {}, perfiles = {};
+for (const [k, d] of Object.entries(DATOS.dispositivos)) { curvas[k] = curva(d); perfiles[k] = perfil(d.perfil); }
+
+const fen = $('fen');
+const grupos = {};
+for (const p of DATOS.fenotipos) (grupos[p.grupo] ||= []).push(p);
+const nombresGrupo = { leucocito: 'Leucocitos primarios', tumoral: 'Cáncer de mama', blasto: 'Leucemias (líneas)' };
+for (const [g, ps] of Object.entries(grupos)) {
+  const og = document.createElement('optgroup'); og.label = nombresGrupo[g] || g;
+  ps.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.nombre; og.appendChild(o); });
+  fen.appendChild(og);
+}
+const oc = document.createElement('option'); oc.value = 'custom'; oc.textContent = 'Personalizado'; fen.appendChild(oc);
+const dev = $('dev');
+for (const [k, d] of Object.entries(DATOS.dispositivos)) { const o = document.createElement('option'); o.value = k; o.textContent = d.nombre; dev.appendChild(o); }
+dev.value = 'membrana_PC';
+
+function cargarFenotipo() {
+  const p = DATOS.fenotipos.find(x => x.id === fen.value);
+  if (p) { $('D').value = p.D; $('E').value = p.E_app; $('gam').value = p.gamma_pN_um; $('tau').value = p.tau; $('fuente').textContent = p.fuente; }
+  else $('fuente').textContent = 'Valores propios: indica su procedencia al usarlos.';
+  actualizar(true);
+}
+fen.value = 'MCF-7';
+
+// ---------------------------------------------------------------- calculo
+function celula() {
+  const D = +$('D').value, a = D / 2, E = +$('E').value;
+  return { D, a, E, Gs: E * a / KE, gamma: (+$('gam').value) / 1000, tau: +$('tau').value };
+}
+function presionCritica(c, Dap, kdev, N = 6000) {
+  const Rn = Dap / 2, cv = curvas[kdev], pf = perfiles[kdev], conf = c.a / Rn;
+  if (Rn >= c.a) return { dP: 0, conf, estado: 'libre' };
+  if (Rn / c.a < cv.xmin) return { dP: NaN, conf, estado: 'fuera' };
+  const dP = DATOS.dispositivos[kdev].tipo === 'canal' ? dPlocal(pf, Rn, c.a, c.Gs, cv, N) : dPtrabajo(Rn, c.a, c.Gs, cv);
+  return { dP, conf, estado: conf <= ENV ? 'dentro' : 'extrapola' };
+}
+const fmt = v => !isFinite(v) ? '—' : v === 0 ? '0' : v < 0.01 ? v.toExponential(2) : v < 10 ? v.toFixed(3) : v.toFixed(1);
+
+let res = null, sim = { s: 0, playing: false, stop: 1 };
+function actualizar(reset) {
+  const c = celula(), Dap = +$('ap').value, P = Math.pow(10, +$('pr').value);
+  $('apv').textContent = Dap.toFixed(1) + ' µm'; $('prv').textContent = fmt(P) + ' kPa';
+  res = presionCritica(c, Dap, dev.value);
+  const pg = dPgota(Dap / 2, c.a, c.gamma);
+  $('pc').textContent = res.estado === 'fuera' ? 'no calculada' : fmt(res.dP) + ' kPa';
+  $('pg').textContent = c.gamma ? fmt(pg) + ' kPa' : 'sin γ medida';
+  $('cf').textContent = res.conf.toFixed(2);
+  const Lc = perfiles[dev.value].zt + perfiles[dev.value].L;
+  $('bc').textContent = (res.estado === 'fuera' || !c.tau) ? '—' : fmt(res.dP * c.tau / Lc * 1000) + ' kPa·s/mm';
+  const v = $('verdict'), f = $('flag');
+  if (res.estado === 'libre') { v.className = 'verdict free'; v.textContent = 'Pasa sin tocar la pared: la apertura es mayor que la célula.'; sim.stop = 1; }
+  else if (res.estado === 'fuera') { v.className = 'verdict stop'; v.textContent = 'Confinamiento por encima de 2.4: fuera de los datos FEM.'; sim.stop = 0.06; }
+  else if (P >= res.dP) { v.className = 'verdict pass'; v.textContent = 'Pasa: la presión aplicada supera la presión crítica.'; sim.stop = 1; }
+  else { v.className = 'verdict stop'; v.textContent = 'Retenida: la presión aplicada no alcanza la presión crítica.'; sim.stop = Math.min(0.22, 0.22 * P / res.dP); }
+  f.className = 'flag ' + ({ libre: 'ok', dentro: 'ok', extrapola: 'warn', fuera: 'bad' }[res.estado]);
+  f.textContent = { libre: 'Sin contacto con la pared.', dentro: 'Dentro de la envolvente validada (a/R ≤ 1.636).',
+    extrapola: 'Fuera de la envolvente validada: extrapolación hasta a/R = 2.4.', fuera: 'El FEM tabulado no llega a este confinamiento.' }[res.estado];
+  if (reset) { sim.s = 0; }
+  dibujarGrafica(c, Dap, P);
+}
+
+// ---------------------------------------------------------------- geometria del esquema (conservacion de volumen)
+const V = r => 4 / 3 * Math.PI * r ** 3;
+function lobulo(v, Rn) {        // forma de un lobulo de volumen v unido a una boca de radio Rn
+  const hemi = 2 / 3 * Math.PI * Rn ** 3;
+  if (v >= hemi) {               // esfera truncada grande: radio R, centro a distancia h de la boca
+    let lo = Rn, hi = 60;
+    for (let i = 0; i < 60; i++) { const R = (lo + hi) / 2, h = Math.sqrt(R * R - Rn * Rn);
+      const vol = V(R) - Math.PI * (R - h) ** 2 * (2 * R + h) / 3; vol > v ? hi = R : lo = R; }
+    const R = (lo + hi) / 2; return { R, c: Math.sqrt(Math.max(R * R - Rn * Rn, 0)) };
+  }
+  let lo = 0, hi = Rn;            // casquete pequeño de altura H
+  for (let i = 0; i < 60; i++) { const H = (lo + hi) / 2, r = (Rn * Rn + H * H) / (2 * H);
+    const vol = Math.PI * H * H * (3 * r - H) / 3; vol > v ? hi = H : lo = H; }
+  const H = Math.max((lo + hi) / 2, 1e-6), r = (Rn * Rn + H * H) / (2 * H);
+  return { R: r, c: -(r - H) };
+}
+function forma(c, Rn, Lp, s) {   // devuelve partes {tipo, ...} en coordenadas um (x eje, boca de entrada en x = -Lp/2)
+  const a = c.a, Vt = V(a), x0 = -Lp / 2, x1 = Lp / 2;
+  if (Rn >= a) { const x = -a - 30 + s * (60 + 2 * a); return { partes: [{ t: 'esf', x, R: a }], nuc: { x, rx: 1, ry: 1 } }; }
+  const Vc = Math.PI * Rn * Rn * Lp;
+  if (Vt <= Vc) {                 // tapon que cabe entero en el poro
+    const l = Math.max((Vt - V(Rn)) / (Math.PI * Rn * Rn), 0), xs = -a - 30 + s * (60 + 2 * a + l);
+    return { partes: [{ t: 'tapon', x: xs, l, R: Rn }], nuc: { x: xs + l / 2, rx: 1, ry: 1, sq: true } };
+  }
+  const libre = Vt - Vc;
+  if (s < 0.25) {                 // entrando
+    const p = Lp * s / 0.25, vin = Math.PI * Rn * Rn * p, up = lobulo(Math.max(Vt - vin, 1e-3), Rn);
+    return { partes: [{ t: 'lob', x: x0, lado: -1, ...up }, { t: 'cil', xa: x0, xb: x0 + p, R: Rn }], nuc: { x: x0 - up.c, sq: false }, rup: up.R };
+  }
+  if (s <= 0.75) {                // poro lleno: el volumen pasa de un lobulo al otro
+    const f = (s - 0.25) / 0.5, v2 = Math.max(f * libre, 1e-3), v1 = Math.max(libre - v2, 1e-3);
+    const up = lobulo(v1, Rn), dn = lobulo(v2, Rn);
+    return { partes: [{ t: 'lob', x: x0, lado: -1, ...up }, { t: 'cil', xa: x0, xb: x1, R: Rn }, { t: 'lob', x: x1, lado: 1, ...dn }],
+      nuc: f < 0.5 ? { x: x0 - up.c, sq: f > 0.35 } : { x: x1 + dn.c, sq: f < 0.65 }, cruce: f };
+  }
+  const p = Lp * (1 - (s - 0.75) / 0.25), vin = Math.PI * Rn * Rn * p, dn = lobulo(Math.max(Vt - vin, 1e-3), Rn);
+  return { partes: [{ t: 'cil', xa: x1 - p, xb: x1, R: Rn }, { t: 'lob', x: x1, lado: 1, ...dn }], nuc: { x: x1 + dn.c, sq: false } };
+}
+
+// ---------------------------------------------------------------- dibujo del campo de microscopio
+const scope = $('scope'), ctx = scope.getContext('2d');
+function ajustar(cv) { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); return d; }
+function dibujarCampo() {
+  const d = ajustar(scope), W = scope.width, H = scope.height, c = celula(), Dap = +$('ap').value, Rn = Dap / 2;
+  const pf = perfiles[dev.value], Lp = 2 * pf.zt, esc = Math.min(W / 90, H / 46), cx = W / 2, cy = H / 2;
+  const X = x => cx + x * esc, Y = y => cy - y * esc;
+  const g = ctx.createRadialGradient(cx, cy, H * 0.1, cx, cy, W * 0.62);
+  g.addColorStop(0, css('--field-a')); g.addColorStop(1, css('--field-b'));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // paredes (perfil real del dispositivo)
+  ctx.fillStyle = css('--wall'); ctx.strokeStyle = css('--wall-edge'); ctx.lineWidth = 1.2 * d;
+  for (const sg of [1, -1]) {
+    ctx.beginPath(); const zs = [];
+    for (let k = -200; k <= 200; k++) zs.push(pf.zmax * k / 200);
+    ctx.moveTo(X(zs[0]), Y(sg * 60));
+    zs.forEach(z => ctx.lineTo(X(z), Y(sg * Math.min(pf.Rw(Math.abs(z), Rn), 30))));
+    ctx.lineTo(X(zs[zs.length - 1]), Y(sg * 60)); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); zs.forEach((z, i) => { const yy = Y(sg * Math.min(pf.Rw(Math.abs(z), Rn), 30)); i ? ctx.lineTo(X(z), yy) : ctx.moveTo(X(z), yy); }); ctx.stroke();
+  }
+  // flujo
+  ctx.strokeStyle = css('--ink2'); ctx.globalAlpha = 0.35; ctx.lineWidth = 1 * d;
+  for (const yy of [-0.6, 0, 0.6]) { const y0 = Y(yy * Rn); ctx.beginPath(); ctx.moveTo(X(-43), y0); ctx.lineTo(X(-38), y0); ctx.lineTo(X(-39.2), y0 - 1.2 * esc * 0.4); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  // celula
+  const tum = (DATOS.fenotipos.find(x => x.id === fen.value) || {}).grupo === 'tumoral';
+  const fill = tum ? css('--eosin') : css('--leu'), edge = tum ? css('--eosin-edge') : css('--leu-edge');
+  const F = forma(c, Rn, Lp, sim.s);
+  for (const [col, ext] of [[edge, 0.45], [fill, 0]]) {
+    ctx.fillStyle = col;
+    for (const p of F.partes) {
+      ctx.save();
+      if (p.t === 'esf') { ctx.beginPath(); ctx.arc(X(p.x), Y(0), (p.R + ext) * esc, 0, 2 * Math.PI); ctx.fill(); }
+      else if (p.t === 'tapon') { ctx.beginPath(); ctx.arc(X(p.x), Y(0), (p.R + ext) * esc, Math.PI / 2, 3 * Math.PI / 2);
+        ctx.lineTo(X(p.x + p.l), Y(p.R + ext)); ctx.arc(X(p.x + p.l), Y(0), (p.R + ext) * esc, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fill(); }
+      else if (p.t === 'cil') { ctx.fillRect(X(p.xa) - 0.5, Y(p.R + ext), (p.xb - p.xa) * esc + 1, 2 * (p.R + ext) * esc); }
+      else if (p.t === 'lob') { ctx.beginPath(); ctx.rect(p.lado < 0 ? 0 : X(p.x), 0, p.lado < 0 ? X(p.x) : W - X(p.x), H); ctx.clip();
+        ctx.beginPath(); ctx.arc(X(p.x + p.lado * p.c), Y(0), (p.R + ext) * esc, 0, 2 * Math.PI); ctx.fill(); }
+      ctx.restore();
+    }
+  }
+  // nucleo (volumen constante; se aplasta al cruzar la boca)
+  const an = c.a * (fenSel().an_a || 0.5); let ry = an, rx = an;
+  if (Rn < c.a && (F.nuc.sq || an > Rn * 0.9)) { ry = Math.min(an, Rn * 0.82); rx = an ** 3 / (ry * ry); }
+  ctx.fillStyle = css('--hema'); ctx.strokeStyle = css('--hema-edge'); ctx.lineWidth = 1 * d;
+  ctx.beginPath(); ctx.ellipse(X(F.nuc.x), Y(0), rx * esc, ry * esc, 0, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  // escala
+  ctx.fillStyle = css('--ink'); ctx.fillRect(X(30), Y(-19), 10 * esc, 2 * d);
+  ctx.font = `${11 * d}px "IBM Plex Mono", monospace`; ctx.fillText('10 µm', X(30), Y(-19) - 5 * d);
+  $('hud').textContent = `${fen.options[fen.selectedIndex].text} · ${c.D.toFixed(1)} µm · apertura ${Dap.toFixed(1)} µm`;
+}
+const fenSel = () => DATOS.fenotipos.find(x => x.id === fen.value) || { an_a: 0.6 };
+
+// ---------------------------------------------------------------- grafica dP_crit(apertura)
+const chart = $('chart'), cx2 = chart.getContext('2d');
+function dibujarGrafica(c, Dap, P) {
+  const d = ajustar(chart), W = chart.width, H = chart.height, m = { l: 58 * d, r: 14 * d, t: 12 * d, b: 34 * d };
+  cx2.clearRect(0, 0, W, H); const ylo = -3, yhi = 2;
+  const X = D => m.l + (D - 5) / 10 * (W - m.l - m.r), Y = v => m.t + (yhi - Math.log10(v)) / (yhi - ylo) * (H - m.t - m.b);
+  cx2.strokeStyle = css('--line'); cx2.fillStyle = css('--ink2'); cx2.lineWidth = 1 * d; cx2.font = `${11 * d}px "IBM Plex Sans", sans-serif`;
+  for (let e = ylo; e <= yhi; e++) { const y = Y(10 ** e); cx2.beginPath(); cx2.moveTo(m.l, y); cx2.lineTo(W - m.r, y); cx2.stroke(); cx2.fillText(`10${e < 0 ? '⁻' : ''}${'⁰¹²³'[Math.abs(e)]}`, 8 * d, y + 4 * d); }
+  for (let D = 5; D <= 15; D += 1) { const x = X(D); cx2.fillText(String(D), x - 4 * d, H - 16 * d); }
+  cx2.fillText('apertura (µm)', W / 2 - 30 * d, H - 3 * d);
+  cx2.save(); cx2.translate(12 * d, H / 2 + 28 * d); cx2.rotate(-Math.PI / 2); cx2.fillText('kPa', 0, 0); cx2.restore();
+  const serie = (cel, color, w) => {
+    cx2.strokeStyle = color; cx2.lineWidth = w * d; cx2.beginPath(); let on = false;
+    for (let D = 5; D <= 15.001; D += 0.1) { const r = presionCritica(cel, D, dev.value, 800);
+      if (!(r.dP > 0) || !isFinite(r.dP)) { on = false; continue; }
+      const y = Y(Math.min(Math.max(r.dP, 10 ** ylo), 10 ** yhi)); on ? cx2.lineTo(X(D), y) : cx2.moveTo(X(D), y); on = true; }
+    cx2.stroke();
+  };
+  const ref = id => { const p = DATOS.fenotipos.find(x => x.id === id); return { a: p.D / 2, Gs: p.E_app * p.D / 2 / KE }; };
+  serie(ref('neutrofilo'), css('--leu-line'), 1.6); serie(ref('MCF-7'), css('--tumour-line'), 1.6); serie(c, css('--sel-line'), 2.4);
+  cx2.setLineDash([5 * d, 4 * d]); cx2.strokeStyle = css('--accent'); cx2.lineWidth = 1.5 * d;
+  cx2.beginPath(); cx2.moveTo(m.l, Y(P)); cx2.lineTo(W - m.r, Y(P)); cx2.stroke(); cx2.setLineDash([]);
+  cx2.strokeStyle = css('--ink'); cx2.beginPath(); cx2.moveTo(X(Dap), m.t); cx2.lineTo(X(Dap), H - m.b); cx2.stroke();
+}
+
+// ---------------------------------------------------------------- animacion
+let last = 0;
+function bucle(t) {
+  if (sim.playing) { const dt = Math.min((t - last) / 1000, 0.05); sim.s = Math.min(sim.s + dt * 0.18, sim.stop);
+    if (sim.s >= sim.stop) { sim.playing = false; $('play').textContent = 'Reproducir'; } }
+  last = t; dibujarCampo(); requestAnimationFrame(bucle);
+}
+$('play').onclick = () => { if (sim.s >= sim.stop) sim.s = 0; sim.playing = !sim.playing; $('play').textContent = sim.playing ? 'Pausa' : 'Reproducir'; };
+$('reset').onclick = () => { sim.s = 0; sim.playing = false; $('play').textContent = 'Reproducir'; };
+fen.onchange = cargarFenotipo;
+for (const id of ['D', 'E', 'gam', 'tau']) $(id).oninput = () => { if (fen.value !== 'custom') fen.value = 'custom'; actualizar(true); };
+dev.onchange = () => actualizar(true); $('ap').oninput = () => actualizar(true); $('pr').oninput = () => actualizar(false);
+window.addEventListener('resize', () => actualizar(false));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => actualizar(false));
+cargarFenotipo(); requestAnimationFrame(bucle);
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+geometria,zt,Ltap,g0,conf_efectivo,angulo,original,corregido,factor
+entrada_suave,4.0,12.0,0.339,1.074,20.2,,0.039,inf
+garganta_larga,8.0,10.0,0.168,1.319,23.9,0.0963,0.6869,7.13
+referencia,4.0,5.0,0.168,1.319,41.5,0.1603,1.0513,6.56
+garganta_corta,2.0,2.5,0.168,1.319,60.5,0.2887,1.7793,6.16
+entrada_abrupta,4.0,2.0,0.018,1.649,65.7,4.0368,4.588,1.14
