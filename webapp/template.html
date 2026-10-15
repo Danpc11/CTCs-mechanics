@@ -95,8 +95,8 @@ section.notes h2{ color:var(--ink); font-size:1.05rem; font-weight:600; margin:1
     </div>
     <div>
       <div class="view"><canvas id="scope"></canvas><div class="hud" id="hud"></div><div class="legend-bar" id="lb"></div></div>
-      <p class="caption">Axisymmetric section (flow from left to right). The computed quarter is mirrored about the axis and the neck plane.</p>
-      <div class="controls"><button class="primary" id="play">Animate closing</button><button id="reset">Reset</button></div>
+      <p class="caption">Axisymmetric section, flow from left to right. At each position the cell is drawn in the finite-element state computed for the local wall radius — the same quasi-static approximation that gives the critical pressure — and it stops where the resisting pressure equals the applied pressure. Raise the pressure while it is stopped to push it through.</p>
+      <div class="controls"><button class="primary" id="play">Animate passage</button><button id="reset">Reset</button></div>
       <div class="verdict" id="verdict"></div>
       <p class="flag" id="flag"></p>
       <div class="readout">
@@ -118,7 +118,7 @@ section.notes h2{ color:var(--ink); font-size:1.05rem; font-weight:600; margin:1
     <h2>Method</h2>
     <p>The cell is a four-compartment axisymmetric finite-strain model (Skalak cortex, near-incompressible neo-Hookean cytoplasm and nucleoplasm, nuclear envelope). For each device the aperture was closed quasi-statically around reference cells from first contact until the continuation stopped converging (at most <i>a</i>/<i>R</i> = 2.4), storing the deformed mesh and the confinement energy. Shapes depend on confinement and on the dimensionless groups, not on stiffness, so they are rescaled to the selected diameter; the reference with the closer nucleus-to-cell ratio is used (0.50 or 0.625). The energy collapses as <i>W</i> = <i>G</i><sub>s</sub><i>a</i>²<i>g</i>(<i>ρ</i>/<i>a</i>), with <i>G</i><sub>s</sub> = <i>E</i><sub>app</sub><i>a</i>/2.608. Channels use the axial reduction indexed by the neck radius; membranes use the work on the volume entering the pore. The liquid-drop bound, 2γ(1/<i>R</i> − 1/<i>a</i>), is independent of the finite-element model.</p>
     <h2>Limits</h2>
-    <p>Quasi-static, axisymmetric and without resolved fluid, adhesion or friction. Results above <i>a</i>/<i>R</i> = 1.636 are extrapolation; above the last converged state nothing is computed. With the soft cytoplasm of the model (Π = 0.1), strain concentrates in the layer between cortex and nucleus. Mechanical parameters of patient-derived CTCs have not been measured; their preset uses transferred values.</p>
+    <p>Quasi-static, axisymmetric and without resolved fluid, adhesion or friction. The passage animation uses the same approximation as the critical pressure: at each position the cell takes the computed state for the local wall radius, symmetric about its own centre, so near the neck its front can overlap the wall; an axial-advance finite-element model would remove this. Results above <i>a</i>/<i>R</i> = 1.636 are extrapolation; above the last converged state nothing is computed. With the soft cytoplasm of the model (Π = 0.1), strain concentrates in the layer between cortex and nucleus. Mechanical parameters of patient-derived CTCs have not been measured; their preset uses transferred values.</p>
   </section>
 </main>
 <script>
@@ -183,7 +183,7 @@ function critical(c, Dap, kdev, N = 6000) {
 }
 const fmt = v => !isFinite(v) ? '—' : v === 0 ? '0' : v < 0.01 ? v.toExponential(2) : v < 10 ? v.toFixed(3) : v.toFixed(1);
 
-let res = null, anim = { on: false, c: 1 };
+let res = null, anim = { on: false, z: null, stopped: false }, path = null;
 function update(resetAnim) {
   const c = cell(), Dap = +$('ap').value, P = 10 ** (+$('pr').value);
   $('apv').textContent = Dap.toFixed(2) + ' µm'; $('prv').textContent = fmt(P) + ' kPa';
@@ -201,7 +201,7 @@ function update(resetAnim) {
   f.className = 'flag ' + ({ free: 'ok', inside: 'ok', extrapolated: 'warn', out: 'bad' }[res.state]);
   f.textContent = { free: 'No wall contact.', inside: 'Inside the assessed confinement range (a/R ≤ 1.636).',
     extrapolated: 'Above the assessed range: extrapolation up to a/R = 2.4.', out: 'The tabulated finite-element states do not reach this confinement.' }[res.state];
-  if (resetAnim) { anim.on = false; anim.c = Math.max(res.conf, 1); $('play').textContent = 'Animate closing'; }
+  if (resetAnim) { anim.on = false; anim.z = null; anim.stopped = false; path = null; $('play').textContent = 'Animate passage'; }
   drawChart(c, Dap, P);
 }
 
@@ -231,9 +231,9 @@ const scope = $('scope'), ctx = scope.getContext('2d');
 function fit(cv) { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); return d; }
 function drawScope() {
   const d = fit(scope), W = scope.width, H = scope.height, c = cell(), Dap = +$('ap').value, Rn = Dap / 2;
-  const pf = walls[dev.value], conf = anim.on ? anim.c : Math.max(c.a / Rn, 1);
-  const Rshow = anim.on ? c.a / anim.c : Rn;
-  const span = Math.max(2.6 * c.a, pf.zt + 3 * pf.L + c.a, 22), esc = Math.min(W / (2 * span), H / (2 * Math.max(c.a * 1.25, Rshow * 1.6, 9)));
+  const pf = walls[dev.value], zc = anim.z === null ? 0 : anim.z, Rshow = Rn;
+  const conf = Math.max(c.a / pf.Rw(zc, Rn), 1);
+  const span = Math.max(halfPath(c, pf) + 1.2 * c.a, 22), esc = Math.min(W / (2 * span), H / (2 * Math.max(c.a * 1.35, Rshow * 1.6, 9)));
   const cx = W / 2, cy = H / 2, X = z => cx + z * esc, Y = r => cy - r * esc;
   const g = ctx.createRadialGradient(cx, cy, H * 0.1, cx, cy, W * 0.62);
   g.addColorStop(0, css('--field-a')); g.addColorStop(1, css('--field-b')); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -255,11 +255,11 @@ function drawScope() {
       const i = T[0][e], j = T[1][e], k = T[2][e];
       const col = mode === 'strain' ? cmap(st.s[e]) : (ref.mesh.nucleus[e] ? hem : eos);
       ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6 * d;
-      ctx.beginPath(); ctx.moveTo(X(sz * xz[i]), Y(sr * xr[i])); ctx.lineTo(X(sz * xz[j]), Y(sr * xr[j])); ctx.lineTo(X(sz * xz[k]), Y(sr * xr[k])); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(zc + sz * xz[i]), Y(sr * xr[i])); ctx.lineTo(X(zc + sz * xz[j]), Y(sr * xr[j])); ctx.lineTo(X(zc + sz * xz[k]), Y(sr * xr[k])); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
     for (const [edges, w] of [[ref.outer, 1.6], [ref.iface, 1.1]]) {
       ctx.strokeStyle = css('--edge'); ctx.lineWidth = w * d; ctx.beginPath();
-      for (const [p1, p2] of edges) { ctx.moveTo(X(sz * xz[p1]), Y(sr * xr[p1])); ctx.lineTo(X(sz * xz[p2]), Y(sr * xr[p2])); }
+      for (const [p1, p2] of edges) { ctx.moveTo(X(zc + sz * xz[p1]), Y(sr * xr[p1])); ctx.lineTo(X(zc + sz * xz[p2]), Y(sr * xr[p2])); }
       ctx.stroke();
     }
   }
@@ -268,7 +268,9 @@ function drawScope() {
   ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
   ctx.fillStyle = css('--ink'); const sb = 10 * esc; ctx.fillRect(W - sb - 18 * d, H - 22 * d, sb, 2 * d);
   ctx.font = `${11 * d}px "IBM Plex Mono", monospace`; ctx.fillText('10 µm', W - sb - 18 * d, H - 28 * d);
-  $('hud').textContent = `${phen.options[phen.selectedIndex].text} · ${c.D.toFixed(1)} µm · aperture ${(2 * Rshow).toFixed(2)} µm · a/R = ${conf.toFixed(2)}` + (st.beyond ? ' (largest computed state shown)' : '');
+  $('hud').textContent = `${phen.options[phen.selectedIndex].text} · ${c.D.toFixed(1)} µm · aperture ${(2 * Rshow).toFixed(2)} µm · local a/R = ${conf.toFixed(2)}`
+    + (anim.z === null ? ' · held at the neck' : ` · position ${zc.toFixed(1)} µm`) + (anim.stopped ? ' · retained here' : '')
+    + (st.beyond ? ' (largest computed state shown)' : '');
   $('lb').innerHTML = mode === 'strain'
     ? `equivalent strain<div class="bar" style="background:linear-gradient(90deg,${[0, .5, 1, 2, 5].map(v => cmap(v)).join(',')})"></div><span class="mono">0 · 0.5 · 1 · 2 · ≥5</span>`
     : `<span style="color:${eos}">■</span> cytoplasm &nbsp;<span style="color:${hem}">■</span> nucleus`;
@@ -299,21 +301,54 @@ function drawChart(c, Dap, P) {
   cx2.strokeStyle = css('--ink'); cx2.beginPath(); cx2.moveTo(X(Dap), m.t); cx2.lineTo(X(Dap), H - m.b); cx2.stroke();
 }
 
-// ---- animation: computed equilibrium states while the aperture closes
+// ---- passage: quasi-static advance along the axis (same approximation as the critical pressure)
+function halfPath(c, pf) { return pf.zt + 4 * pf.L + 1.3 * c.a; }
+function buildPath() {
+  const c = cell(), Rn = +$('ap').value / 2, pf = walls[dev.value], cv = curves[dev.value], P = 10 ** (+$('pr').value);
+  const z0 = -halfPath(c, pf), N = 600, zs = [], q = []; let qmax = 0;
+  for (let k = 0; k <= N; k++) {
+    const z = z0 * (1 - k / N), R = pf.Rw(z, Rn), u = R / c.a; let v = 0;
+    if (R < c.a) v = u < cv.xmin ? Infinity : c.Gs * c.a * Math.abs(cv.df(u)) * Math.abs(pf.dRw(Math.abs(z), Rn)) / (Math.PI * R * R);
+    zs.push(z); q.push(v); if (isFinite(v)) qmax = Math.max(qmax, v);
+  }
+  // membranes report the work estimate: scale the resisting profile so that its maximum equals the reported value
+  const kf = (qmax > 0 && isFinite(res.dP) && res.dP > 0) ? res.dP / qmax : 1;
+  const qs = q.map(v => kf * v);
+  let zstop = null;
+  if (res.state !== 'free') for (let k = 0; k <= N; k++) if (qs[k] >= P) { zstop = zs[k]; break; }
+  return { z0, zs, q: qs, zstop, P };
+}
+function qAt(z) {
+  if (!path || z >= 0) return 0;
+  const N = path.zs.length - 1, k = Math.min(N, Math.max(0, Math.round((1 - z / path.z0) * N)));
+  return path.q[k];
+}
 let last = 0;
 function loop(t) {
-  if (anim.on) {
-    const target = Math.min(Math.max(cell().a / (+$('ap').value / 2), 1), 2.4);
-    anim.c = Math.min(anim.c + Math.min((t - last) / 1000, 0.05) * 0.45, target);
-    if (anim.c >= target) { anim.on = false; $('play').textContent = 'Animate closing'; }
+  const dt = Math.min((t - last) / 1000, 0.05); last = t;
+  if (anim.on && path) {
+    const v = 2 * Math.abs(path.z0) / 4.5;                     // about 4.5 s to cross when unimpeded
+    const f = anim.z < 0 ? Math.max(0.12, 1 - qAt(anim.z) / path.P) : 1;
+    anim.z += v * f * dt;
+    if (path.zstop !== null && anim.z >= path.zstop) { anim.z = path.zstop; anim.on = false; anim.stopped = true; $('play').textContent = 'Animate passage'; }
+    else if (anim.z >= -path.z0) { anim.on = false; $('play').textContent = 'Animate passage'; }
   }
-  last = t; drawScope(); requestAnimationFrame(loop);
+  drawScope(); requestAnimationFrame(loop);
 }
-$('play').onclick = () => { if (!anim.on) { anim.c = 1; anim.on = true; $('play').textContent = 'Pause'; } else { anim.on = false; $('play').textContent = 'Animate closing'; } };
-$('reset').onclick = () => { anim.on = false; $('play').textContent = 'Animate closing'; };
+$('play').onclick = () => {
+  if (anim.on) { anim.on = false; $('play').textContent = 'Animate passage'; return; }
+  path = buildPath();
+  if (anim.z === null || anim.stopped || anim.z >= -path.z0) anim.z = path.z0;
+  anim.stopped = false; anim.on = true; $('play').textContent = 'Pause';
+};
+$('reset').onclick = () => { anim.on = false; anim.z = null; anim.stopped = false; path = null; $('play').textContent = 'Animate passage'; };
 phen.onchange = loadPhenotype;
 for (const id of ['D', 'E', 'gam', 'tau']) $(id).oninput = () => { if (phen.value !== 'custom') phen.value = 'custom'; update(true); };
-dev.onchange = () => update(true); $('ap').oninput = () => update(true); $('pr').oninput = () => update(false);
+dev.onchange = () => update(true); $('ap').oninput = () => update(true);
+$('pr').oninput = () => {                 // raising the pressure on a retained cell pushes it on
+  update(false);
+  if (anim.z !== null) { path = buildPath(); if (anim.stopped && (path.zstop === null || path.zstop > anim.z + 1e-9)) { anim.stopped = false; anim.on = true; $('play').textContent = 'Pause'; } }
+};
 window.addEventListener('resize', () => update(false));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => update(false));
 loadPhenotype(); requestAnimationFrame(loop);
