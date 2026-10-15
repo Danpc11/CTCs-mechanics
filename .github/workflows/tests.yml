@@ -1,0 +1,21 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "20"}
+      - name: system libraries for gmsh
+        run: sudo apt-get update && sudo apt-get install -y libglu1-mesa libxft2 libxcursor1 libxinerama1
+      - name: python dependencies
+        run: pip install -r requirements.txt
+      - name: unit and fault-injection tests
+        run: PYTHONPATH=src python -m pytest -q
+      - name: web app reproduces the Python reduction
+        run: node webapp/prueba.js
+      - name: corrected Table 2 tests (T1-T4)
+        run: cd manuscript_analysis/07_correccion_reduccion && python corregir_tabla2.py

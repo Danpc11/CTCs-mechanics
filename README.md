@@ -16,19 +16,24 @@ lines and leucocytes. It is not a validated device.
 | `src/ctcfem/` | Reproducible package for population and device runs (primary leucocyte subpopulations, membranes and channels, apertures 5–15 µm), with resumable parallel execution and a run manifest. |
 | `data/` | Population distributions and device/material database, every entry with status (measured / transferred / declared) and source. |
 | `webapp/` | Self-contained web app: entry pressure and a schematic of passage for any phenotype (`webapp/index.html`). |
-| `tests/` | Automated tests (solver patch test, exact-aperture geometry, sampling reproducibility, reduction). |
+| `figures/` | Manuscript figures regenerated from `manuscript_analysis/datos/` by `05_figuras/generar_figuras.py` (600 dpi). |
+| `tests/` | Automated tests (solver patch test, exact-aperture geometry, sampling reproducibility, reduction, fault-tolerant parallel execution). |
 
 ## Quick start
 
 ```bash
 conda env create -f environment.yml && conda activate ctcfem   # pinned versions
-make pruebas                                                   # 10 tests
+make pruebas                                                   # 14 tests
 cd manuscript_analysis/07_correccion_reduccion && python corregir_tabla2.py   # corrected Table 2
 node webapp/prueba.js                                          # web app reproduces Python
 ```
 
-Full population run on a workstation (40 cores): `bash scripts/correr_servidor.sh configs/completo.yaml 40`
-(see `docs/USAGE_ctcfem_es.md`).
+Full population run on a workstation (e.g. 20 physical cores):
+`python -m ctcfem.cli correr --config configs/completo.yaml --workers 20` (in byobu/tmux) or
+`bash scripts/correr_servidor.sh configs/completo.yaml 20` (detached). One BLAS thread per worker is enforced;
+a dead or runaway worker is recovered without hanging the run (see `docs/USAGE_ctcfem_es.md`).
+
+All manuscript figures (600 dpi): `cd manuscript_analysis/05_figuras && python generar_figuras.py` → `figures/`.
 
 ## Notes for reuse
 

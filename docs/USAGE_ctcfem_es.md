@@ -31,7 +31,7 @@ make humo                                # ~1 min en 1 núcleo: cadena completa
 ```bash
 bash scripts/correr_servidor.sh configs/convergencia_malla_h10.yaml 20   # 1) convergencia de malla
 bash scripts/correr_servidor.sh configs/convergencia_malla_h14.yaml 20   #    (pareadas: misma muestra)
-bash scripts/correr_servidor.sh configs/completo.yaml 40                 # 2) producción
+bash scripts/correr_servidor.sh configs/completo.yaml 20                 # 2) producción (o en byobu: python -m ctcfem.cli correr ... --workers 20)
 tail -f resultados/completo/logs/progreso.log                            #    progreso y ETA
 python -m ctcfem.cli analizar --config configs/completo.yaml             # 3) análisis
 ```
