@@ -18,7 +18,7 @@ A computational proof of concept parameterised with published measurements of br
 | `data/` | Population distributions and device/material data; every entry has a status (measured, transferred, declared, derived) and a source. |
 | `configs/` | Run configurations (smoke test, mesh convergence, full run). |
 | `webapp/` | Self-contained web app and the scripts that build it. |
-| `figures/` | Manuscript figures at 600 dpi, regenerated from `manuscript_analysis/datos/`. |
+| `figures/` | Manuscript figures (Fig. 1–7, Fig. S1) and graphical abstract at 600 dpi, regenerated from `manuscript_analysis/datos/` by `05_figuras/generar_figuras.py`. |
 | `tests/` | Automated tests: solver patch test, geometry, sampling, reduction, volume conservation, fault-tolerant execution. |
 
 ## Quick start
