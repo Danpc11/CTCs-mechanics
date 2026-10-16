@@ -40,7 +40,7 @@ assert errC < 1e-9 and errO > 0.5
 # ---------------- T2: cero artificial a 2a/D = 1.20 ----------------------------
 Wq = lambda x: np.where(x < a, (a - x) ** 2, 0.0)
 dWq = lambda x: np.where(x < a, -2 * (a - x), 0.0)
-p_orig = L.presion_critica(a, a / 1.20, Rwide, zt, Lt, Wq, dWq)["dP_crit"]
+p_orig = L.presion_critica(a, a / 1.20, Rwide, zt, Lt, Wq, dWq, legacy=True)["dP_crit"]
 p_corr = R.presion_critica(a, a / 1.20, Rwide, zt, Lt, R.spline_por_cuello([a / 1.2, a / 1.4], [Wq(R.R_cuello(a / 1.2, Rwide, zt, Lt)), Wq(R.R_cuello(a / 1.4, Rwide, zt, Lt))], a, Rwide, zt, Lt))["dP_crit"]
 print(f"T2 2a/D=1.20 con W cualquiera: original dP={p_orig}  corregido dP={p_corr:.3g}")
 assert p_orig == 0.0 and p_corr > 0
@@ -56,7 +56,7 @@ PUB = {  # Tabla 2 del manuscrito, geometria de referencia (kPa)
 filas = []
 for c in PUB:
     rt = a / c
-    pO = L.presion_critica(a, rt, Rwide, zt, Lt, spO, spO.derivative())["dP_crit"]
+    pO = L.presion_critica(a, rt, Rwide, zt, Lt, spO, spO.derivative(), legacy=True)["dP_crit"]
     pC = R.presion_critica(a, rt, Rwide, zt, Lt, spC, "quiebre")
     pC2 = R.presion_critica(a, rt, Rwide, zt, Lt, spC, "quiebre", nz=20001)["dP_crit"]
     pS = R.presion_critica(a, rt, Rwide, zt, Lt, spC, "suave")

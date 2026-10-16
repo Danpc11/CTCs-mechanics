@@ -509,7 +509,7 @@ def longitud_de_carga(a, Rt, Rwide, zt, Ltap, nz=20001):
     return float(z[i.max()]) if len(i) else 0.0
 
 
-def presion_critica(a, Rt, Rwide, zt, Ltap, W_of_R, dW_dR, nz=6001):
+def presion_critica(a, Rt, Rwide, zt, Ltap, W_of_R, dW_dR, nz=6001, legacy=False):
     """Presion critica de paso (kPa) y geometria del camino de entrada.
 
     El maximo se alcanza en el propio cuello (z -> 0+): el perfil tanh(|z|)
@@ -526,8 +526,10 @@ def presion_critica(a, Rt, Rwide, zt, Ltap, W_of_R, dW_dR, nz=6001):
     # W must be indexed by the neck radius actually reached (paso123.splines); the path then runs from first
     # contact (R_w = a) to the upper limit of the assessed range, and z = 0 is excluded (sign(0) = 0 artefact)
     Rmin_val = R_minimo(a / CONF_MAX, Rwide, zt, Ltap)
-    Rmax_val = a
-    z = np.linspace(0.0, zt + 6.0 * Ltap, nz)[1:]
+    Rmax_val = R_minimo(a / CONF_MIN, Rwide, zt, Ltap) if legacy else a
+    z = np.linspace(0.0, zt + 6.0 * Ltap, nz) if legacy else np.linspace(0.0, zt + 6.0 * Ltap, nz)[1:]
+    # legacy=True reproduces the original reduction (band from nominal 1.20, z = 0 included); used only by
+    # 07_correccion_reduccion/corregir_tabla2.py to document its artefacts and reproduce the published Table 2
     Rw = perfil_Rw(z, Rt, Rwide, zt, Ltap)
     dR = np.abs(dRw_dz(z, Rt, Rwide, zt, Ltap))
     val = (Rw >= Rmin_val) & (Rw <= Rmax_val)
