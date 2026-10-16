@@ -1,0 +1,35 @@
+{
+ "started": "2026-10-15T18:00:29-0600",
+ "host": "fx-gpu",
+ "platform": "Linux-7.0.0-38-generic-x86_64-desconocido-with-glibc2.43",
+ "cpu": 104,
+ "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
+ "versions": {
+  "numpy": "2.4.4",
+  "scipy": "1.17.1",
+  "scikit_fem": "12.0.2",
+  "gmsh": "4.15.2",
+  "pandas": "3.0.2",
+  "matplotlib": "3.10.8",
+  "pyyaml": "6.0.3"
+ },
+ "config": "98de498c4798ea97968dc0ea37c48eaed09a5f07d09d0733748818b090bbc533",
+ "data": {
+  "populations": "ddc3eb58fc54c49a21325594a42e02e20ad86b733816b3dd5705187192fcafbc",
+  "materials": "796475fbd4dff13a4f496cbb49b9c3b1c484fd68ca0117acddc2af87b2f67440"
+ },
+ "code": {
+  "__init__.py": "33d7cd9bbf3a484f4f1262ee8bee9cf5d1e87e2cd27c1457c978e12fee9759fc",
+  "analysis.py": "09b65b3d6fc60db433472a476de2ac1a860a8ec5c466be4becaf42f35f1d524f",
+  "cell_model.py": "a64096a97326afa2156df7a290209375bb90fbea022a6642c288715f2bb5e12b",
+  "cli.py": "9349eb1772aa5f057d25f59214a52aee14dcbe18b16cdce8044a2be78e4e64ee",
+  "execution.py": "3d2eff6112e6e0a5f18f5b3864d4a18fa337de5864e71f8a2288f8666d540fc0",
+  "geometry.py": "65b37b7f4568484641960335fc7a5e865e5eac0568d7741edbf8b99d3f14a671",
+  "populations.py": "0952ca3a08dfc669d1f07c8e0be818535131236c9b464ebc2b89a0c4b837a5ed",
+  "reduction.py": "d28c31580e4b2f408aa0b94487292546a8d12fee3b08f8ce801086465bf569d8",
+  "runner.py": "ecca8f27018f51602c9daf813cd564740307ebb3c33b78ca8949197a71cb0d95",
+  "solver_axisimetrico.py": "c5261e187cd71f31a20f76488ff38856b7061d567529c574f6c44ffe78053dfe"
+ },
+ "n_tasks": 3600,
+ "seed": 20261015
+}

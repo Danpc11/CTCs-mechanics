@@ -56,10 +56,12 @@ def windows(T: pd.DataFrame, differential: dict) -> pd.DataFrame:
     """Contact-based operating points.
 
     Size decides which cells touch the wall; mechanics acts only on those that do. For each device, aperture and
-    tumour population, the operating pressure P_op is set to retain a target fraction of ALL tumour cells
-    (cells that do not touch the wall pass whatever the pressure, so the attainable yield is capped by the
-    contact fraction). Leucocyte retention is the differential-weighted fraction with dP > P_op; when no sampled
-    leucocyte is retained, the 95% upper bound 3/n_leucocytes is reported instead of zero.
+    tumour population, the operating pressure P_op is set to retain a target fraction of ALL tumour cells (cells
+    that do not touch the wall pass whatever the pressure, so the attainable yield is capped by the contact
+    fraction). Quantiles use only complete states: continuations that stopped before the aperture give lower
+    bounds and are excluded and counted. Leucocyte retention is reported as the observed differential-weighted
+    fraction and the observed number of retained sampled leucocytes; with a stratified, weighted sample no
+    binomial bound is attached to a zero count.
     """
     out = []
     for (nd, D), s in T[T.status == "ok"].groupby(["device", "D_aperture"]):
@@ -67,23 +69,24 @@ def windows(T: pd.DataFrame, differential: dict) -> pd.DataFrame:
         if leu.empty:
             continue
         leu["w"] = leu.population.map(differential).fillna(0.0) / leu.groupby("population").population.transform("count")
-        n_leu = len(leu); ub = 3.0 / n_leu
         for tum, st in s[s.group == "tumour"].groupby("population"):
             cap = float(st.contact.mean())
+            usable = st[(~st.contact) | st.complete]
             for target in (0.25, 0.50, 0.70, 0.90, 0.99):
-                if target > cap:
+                if target > cap or usable.empty:
                     continue
-                P_op = float(np.quantile(st.dP, 1.0 - target))
+                P_op = float(np.quantile(usable.dP, 1.0 - target))
                 if P_op <= 0:
                     continue
-                ret = float(leu.w[leu.dP > P_op].sum() / leu.w.sum())
-                kept = st[st.dP > P_op]
-                out.append(dict(device=nd, D_aperture=D, tumour=tum, tumour_contact_fraction=cap, target_yield=target,
-                                P_operating=P_op, leucocytes_retained_per_million=ret * 1e6,
-                                leucocyte_retention_upper_bound_per_million=(ub if ret == 0 else ret) * 1e6,
-                                leucocytes_sampled=n_leu,
-                                retained_tumour_inside_range=float(kept.inside_assessed_range.mean()) if len(kept) else np.nan,
-                                retained_tumour_complete=float(kept.complete.mean()) if len(kept) else np.nan))
+                kept = usable[usable.dP > P_op]
+                out.append(dict(device=nd, D_aperture=D, tumour=tum, tumour_contact_fraction=cap,
+                                tumour_contact_inside_range=float((st.contact & st.inside_assessed_range).mean()),
+                                tumour_contact_above_range=float((st.contact & ~st.inside_assessed_range).mean()),
+                                tumour_lower_bounds_excluded=int(len(st) - len(usable)),
+                                target_yield=target, P_operating=P_op,
+                                leucocytes_retained_weighted_fraction=float(leu.w[leu.dP > P_op].sum() / leu.w.sum()),
+                                leucocytes_retained_count=int((leu.dP > P_op).sum()), leucocytes_sampled=int(len(leu)),
+                                retained_tumour_inside_range=float(kept.inside_assessed_range.mean()) if len(kept) else np.nan))
     return pd.DataFrame(out)
 
 

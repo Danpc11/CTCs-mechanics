@@ -75,6 +75,9 @@ def dP_critica_sustituto(coef, a, Gs, conf_nom, an_a, C, Pi, r_nuc, r_env,
     Rwide = 1.6 * a
     Rt = a / conf_nom
     Rmin_val = L.perfil_Rw(0.0, a / L.CONF_MAX, Rwide, zt, Ltap)
+    # The surrogate is fitted for nominal confinements 1.20-2.43, so the path is evaluated from the neck radius of the
+    # nominal-1.20 state (effective confinement 1.039) rather than from first contact; between first contact and that
+    # radius the barrier is small (Table 2: 0.010 kPa at nominal 1.20) and the maximum lies deeper in the constriction.
     Rmax_val = L.perfil_Rw(0.0, a / L.CONF_MIN, Rwide, zt, Ltap)
     z = np.linspace(0.0, zt + 6.0 * Ltap, nz)[1:, None]          # z = 0 excluded (sign(0) = 0)
     Rw = L.perfil_Rw(z, Rt[None, :], Rwide[None, :], zt, Ltap)
@@ -90,7 +93,7 @@ def dP_critica_sustituto(coef, a, Gs, conf_nom, an_a, C, Pi, r_nuc, r_env,
     # cc tiene forma (nz, n) y .ravel() en orden C recorre z-mayor: para cada
     # indice de z, TODAS las muestras.  Los parametros deben replicarse con
     # np.tile (no np.repeat, que los desalinearia con el camino).
-    rep = [np.tile(v, nz) for v in (an_a, C, Pi, r_nuc, r_env)]
+    rep = [np.tile(v, cc.shape[0]) for v in (an_a, C, Pi, r_nuc, r_env)]   # cc has one row per path point (z = 0 excluded)
     fp = (f_sustituto(coef, (cc + eps).ravel(), *rep)
           - f_sustituto(coef, (cc - eps).ravel(), *rep)) / (2 * eps)
     fp = fp.reshape(cc.shape)

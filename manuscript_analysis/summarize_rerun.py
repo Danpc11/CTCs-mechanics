@@ -21,3 +21,10 @@ print("mean marginal split:", sig[[k for k in sig.columns if k.startswith("frac_
 s = os.path.join(D, "sobol_por_poblacion.csv")
 if os.path.exists(s):
     print("\nSobol (dominant total-order indices):\n", pd.read_csv(s).head(20).to_string(index=False))
+# entry-time ratio MCF-7 / MDA-MB-231 at the reference geometry, nominal 1.70, at pressures above both thresholds
+r = c[(c.geometria == "referencia") & (np.isclose(c.confinamiento, 1.70))].set_index("estirpe")
+for dP in (2.0, 5.0):
+    col = f"t_transito_s_dP{dP:g}"
+    if col in r.columns and {"MCF-7", "MDA-MB-231"} <= set(r.index):
+        tm, td = r.loc["MCF-7", col], r.loc["MDA-MB-231", col]
+        print(f"entry time at {dP:g} kPa: MCF-7 {tm} s, MDA-MB-231 {td} s, ratio {tm / td if tm and td else 'n/a'}")

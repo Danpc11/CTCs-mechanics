@@ -1,13 +1,13 @@
 """Deformed finite-element states used in Figs. 1 and 3 -> datos/fem_shapes_channel.json (~1 min).
 Tumour-like (a = 8.74 um, a_n/a = 0.50) and leucocyte-like (a = 4.20 um, a_n/a = 0.625) cells in the PDMS channel
 constriction at effective confinements 1.20, 1.45 and 1.636, with element strain and the share of stored energy per
-compartment. kappa/mu = 1e3, the value used for the numbers reported in the manuscript."""
+compartment. kappa/mu = 1e5 (volume conserving), the baseline shared with Table S3."""
 import sys, os, json, numpy as np, yaml
 R = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")); sys.path.insert(0, os.path.join(R, "src"))
 from ctcfem.execution import force_single_thread; force_single_thread()
 from ctcfem import geometry as G, cell_model as CM
 from ctcfem.solver_axisimetrico import axi_F
-CM.KAPPA_MU = float(os.environ.get("CTC_KAPPA_MU", "1e3"))
+CM.KAPPA_MU = float(os.environ.get("CTC_KAPPA_MU", "1e5"))
 prof = G.profile_for_device(yaml.safe_load(open(os.path.join(R, "data", "materials.yaml")))["devices"]["channel_PDMS"])
 out = {}
 for name, a, an_a, E in [("tumour", 8.74, 0.50, 2.65), ("leucocyte", 4.20, 0.625, 0.43)]:
