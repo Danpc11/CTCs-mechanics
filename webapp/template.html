@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cell entry into a pore — CTCs-mechanics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#1d2430; --ink2:#4d5868; --line:#d5dbe3;
+  --field-a:#fbfcf7; --field-b:#e3e8e0; --wall:#9aa3ae; --wall-edge:#5d6672;
+  --eosin:#eab2c3; --hema:#6a59ad; --edge:#3a2f5c; --accent:#2f6f8f;
+  --ok:#2e7d4f; --warn:#a35a00; --bad:#b3263e; --tumour-line:#c2416b; --leu-line:#5d54a8; --sel-line:#1d2430;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11151b; --panel:#1a2029; --ink:#e7ebf0; --ink2:#a6b0bd; --line:#2d3643;
+  --field-a:#1f2722; --field-b:#0e120f; --wall:#55606d; --wall-edge:#8a93a0;
+  --eosin:#c77a95; --hema:#8b7fd6; --edge:#e9e4ff; --accent:#6fb3d4;
+  --ok:#5fc48a; --warn:#e3a14a; --bad:#ef6b80; --tumour-line:#ef7fa3; --leu-line:#a59cf0; --sel-line:#e7ebf0;
+  color-scheme: dark; } }
+:root[data-theme="dark"]{
+  --bg:#11151b; --panel:#1a2029; --ink:#e7ebf0; --ink2:#a6b0bd; --line:#2d3643;
+  --field-a:#1f2722; --field-b:#0e120f; --wall:#55606d; --wall-edge:#8a93a0;
+  --eosin:#c77a95; --hema:#8b7fd6; --edge:#e9e4ff; --accent:#6fb3d4;
+  --ok:#5fc48a; --warn:#e3a14a; --bad:#ef6b80; --tumour-line:#ef7fa3; --leu-line:#a59cf0; --sel-line:#e7ebf0; color-scheme: dark; }
+:root{ box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size:15px; line-height:1.5; }
+.mono,.val,.metric .v{ font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; }
+main{ max-width:1180px; margin:0 auto; padding:20px 18px 40px; }
+h1{ font-size:1.6rem; font-weight:600; margin:4px 0; letter-spacing:-0.01em; }
+.lede{ color:var(--ink2); max-width:76ch; margin:0 0 18px; }
+.grid{ display:grid; grid-template-columns:320px 1fr; gap:18px; align-items:start; }
+@media (max-width:860px){ .grid{ grid-template-columns:1fr; } }
+.panel{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+.field{ margin-bottom:14px; }
+label{ display:block; font-size:.86rem; color:var(--ink2); margin-bottom:4px; }
+select,input[type=number]{ width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:7px 8px; }
+input[type=range]{ width:100%; accent-color:var(--accent); }
+.row{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.params{ display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
+.src{ font-size:.78rem; color:var(--ink2); margin-top:6px; }
+.seg{ display:flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+.seg button{ flex:1; border:0; border-radius:0; }
+.seg button.on{ background:var(--accent); color:#fff; }
+.view{ position:relative; border-radius:10px; overflow:hidden; border:1px solid var(--line); background:var(--field-b); }
+canvas{ display:block; width:100%; }
+#scope{ aspect-ratio:16/8; }
+.hud{ position:absolute; left:12px; top:10px; font-size:.82rem; color:var(--ink2); }
+.legend-bar{ position:absolute; right:12px; top:10px; font-size:.75rem; color:var(--ink2); text-align:right; }
+.legend-bar .bar{ width:130px; height:8px; border-radius:3px; margin:3px 0 1px auto; }
+.controls{ display:flex; gap:8px; margin:10px 0 14px; flex-wrap:wrap; }
+button{ font:inherit; font-weight:500; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:6px; padding:7px 14px; cursor:pointer; }
+button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:14px; }
+.metric{ border-left:3px solid var(--line); padding:2px 10px; }
+.metric .k{ font-size:.8rem; color:var(--ink2); }
+.metric .v{ font-size:1.15rem; }
+.verdict{ font-weight:600; font-size:1.05rem; padding:8px 12px; border-radius:6px; margin-bottom:10px; }
+.verdict.pass{ color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, transparent); }
+.verdict.stop{ color:var(--bad); background:color-mix(in srgb, var(--bad) 12%, transparent); }
+.verdict.free{ color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); }
+.flag{ font-size:.85rem; margin:0 0 10px; } .flag.warn{ color:var(--warn); } .flag.bad{ color:var(--bad); } .flag.ok{ color:var(--ok); }
+#chart{ aspect-ratio:16/7; background:var(--panel); }
+.legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:.82rem; color:var(--ink2); margin-top:6px; }
+.sw{ display:inline-block; width:18px; height:3px; vertical-align:middle; margin-right:6px; }
+.caption{ font-size:.82rem; color:var(--ink2); margin:6px 0 0; }
+section.notes{ margin-top:22px; max-width:80ch; color:var(--ink2); font-size:.92rem; }
+section.notes h2{ color:var(--ink); font-size:1.05rem; font-weight:600; margin:18px 0 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cell entry into a pore</h1>
+  <p class="lede">Choose a cell phenotype, a device and an aperture. The cell shape is the finite-element solution of the axisymmetric multi-compartment model held at the neck; the critical entry pressure follows from the same model.</p>
+  <div class="grid">
+    <div class="panel">
+      <div class="field"><label for="phen">Phenotype</label><select id="phen"></select><div class="src" id="source"></div></div>
+      <div class="params">
+        <div><label for="D">Diameter (µm)</label><input type="number" id="D" step="0.1" min="4" max="30"></div>
+        <div><label for="E">E<sub>app</sub> (kPa)</label><input type="number" id="E" step="0.01" min="0.05" max="20"></div>
+        <div><label for="gam">γ (pN/µm)</label><input type="number" id="gam" step="1" min="0" max="500"></div>
+        <div><label for="tau">τ (s)</label><input type="number" id="tau" step="0.001" min="0" max="20"></div>
+      </div>
+      <div class="field" style="margin-top:14px"><label for="dev">Device</label><select id="dev"></select></div>
+      <div class="field"><div class="row"><label for="ap">Aperture diameter</label><span class="val" id="apv"></span></div>
+        <input type="range" id="ap" min="5" max="15" step="0.25" value="12"></div>
+      <div class="field"><div class="row"><label for="pr">Applied pressure</label><span class="val" id="prv"></span></div>
+        <input type="range" id="pr" min="-3" max="2" step="0.01" value="0"></div>
+      <div class="field"><label>Colour</label><div class="seg"><button id="m-strain" class="on">Strain</button><button id="m-comp">Compartments</button></div></div>
+    </div>
+    <div>
+      <div class="view"><canvas id="scope"></canvas><div class="hud" id="hud"></div><div class="legend-bar" id="lb"></div></div>
+      <p class="caption">Axisymmetric section, flow from left to right. At each position the cell is drawn in the finite-element state computed for the local wall radius — the same quasi-static approximation that gives the critical pressure — and it stops where the resisting pressure equals the applied pressure. Raise the pressure while it is stopped to push it through.</p>
+      <div class="controls"><button class="primary" id="play">Animate passage</button><button id="reset">Reset</button></div>
+      <div class="verdict" id="verdict"></div>
+      <p class="flag" id="flag"></p>
+      <div class="readout">
+        <div class="metric"><div class="k">Critical entry pressure</div><div class="v" id="pc"></div></div>
+        <div class="metric"><div class="k">Liquid-drop bound</div><div class="v" id="pg"></div></div>
+        <div class="metric"><div class="k">Confinement <i>a</i>/<i>R</i></div><div class="v" id="cf"></div></div>
+        <div class="metric"><div class="k">Device threshold β<sub>c</sub></div><div class="v" id="bc"></div></div>
+      </div>
+      <div class="view"><canvas id="chart"></canvas></div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--sel-line)"></span>selected phenotype</span>
+        <span><span class="sw" style="background:var(--leu-line)"></span>neutrophil</span>
+        <span><span class="sw" style="background:var(--tumour-line)"></span>MCF-7</span>
+        <span><span class="sw" style="background:var(--accent)"></span>applied pressure</span>
+      </div>
+    </div>
+  </div>
+  <section class="notes">
+    <h2>Method</h2>
+    <p>The cell is a four-compartment axisymmetric finite-strain model (Skalak cortex, near-incompressible neo-Hookean cytoplasm and nucleoplasm, nuclear envelope). For each device the aperture was closed quasi-statically around reference cells from first contact until the continuation stopped converging (at most <i>a</i>/<i>R</i> = 2.4), storing the deformed mesh and the confinement energy. Shapes depend on confinement and on the dimensionless groups, not on stiffness, so they are rescaled to the selected diameter; the reference with the closer nucleus-to-cell ratio is used (0.50 or 0.625). The energy collapses as <i>W</i> = <i>G</i><sub>s</sub><i>a</i>²<i>g</i>(<i>ρ</i>/<i>a</i>), with <i>G</i><sub>s</sub> = <i>E</i><sub>app</sub><i>a</i>/2.608. Channels use the axial reduction indexed by the neck radius; membranes use the work on the volume entering the pore. The liquid-drop bound, 2γ(1/<i>R</i> − 1/<i>a</i>), is independent of the finite-element model.</p>
+    <h2>Limits</h2>
+    <p>Quasi-static, axisymmetric and without resolved fluid, adhesion or friction. The passage animation uses the same approximation as the critical pressure: at each position the cell takes the computed state for the local wall radius, symmetric about its own centre, so near the neck its front can overlap the wall; an axial-advance finite-element model would remove this. Results above <i>a</i>/<i>R</i> = 1.636 are extrapolation; above the last converged state nothing is computed. With the soft cytoplasm of the model (Π = 0.1), strain concentrates in the layer between cortex and nucleus. Mechanical parameters of patient-derived CTCs have not been measured; their preset uses transferred values.</p>
+  </section>
+</main>
+<script>
+const DATA = __DATA__;
+const SHAPES = __SHAPES__;
+__CORE__
+
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const KE = DATA.K_E, RANGE = 1.636;
+const curves = {}, walls = {};
+for (const [k, d] of Object.entries(DATA.devices)) { curves[k] = energyCurve(d); walls[k] = wallProfile(d.profile); }
+
+// ---- mesh topology: outer boundary and nuclear interface edges
+for (const ref of Object.values(SHAPES.cells)) {
+  const P = ref.mesh.p, T = ref.mesh.t, nt = T[0].length, cnt = new Map(), owner = new Map();
+  for (let e = 0; e < nt; e++) for (const [i, j] of [[0, 1], [1, 2], [2, 0]]) {
+    const a = T[i][e], b = T[j][e], key = a < b ? a + ',' + b : b + ',' + a;
+    cnt.set(key, (cnt.get(key) || 0) + 1); (owner.get(key) || owner.set(key, []).get(key)).push(e);
+  }
+  ref.outer = []; ref.iface = [];
+  for (const [key, n] of cnt) {
+    const [a, b] = key.split(',').map(Number), on = owner.get(key);
+    if (n === 1) { const onAxis = (Math.abs(P[0][a]) < 1e-6 && Math.abs(P[0][b]) < 1e-6) || (Math.abs(P[1][a]) < 1e-6 && Math.abs(P[1][b]) < 1e-6); if (!onAxis) ref.outer.push([a, b]); }
+    else if (ref.mesh.nucleus[on[0]] !== ref.mesh.nucleus[on[1]]) ref.iface.push([a, b]);
+  }
+}
+
+// ---- controls
+const phen = $('phen'), groupsSeen = {}, groupName = { leucocyte: 'Primary leucocytes', tumour: 'Breast cancer', blast: 'Leukaemia lines' };
+for (const p of DATA.phenotypes) (groupsSeen[p.group] ||= []).push(p);
+for (const [g, ps] of Object.entries(groupsSeen)) {
+  const og = document.createElement('optgroup'); og.label = groupName[g] || g;
+  ps.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; og.appendChild(o); });
+  phen.appendChild(og);
+}
+const oc = document.createElement('option'); oc.value = 'custom'; oc.textContent = 'Custom'; phen.appendChild(oc);
+const dev = $('dev');
+for (const [k, d] of Object.entries(DATA.devices)) { const o = document.createElement('option'); o.value = k; o.textContent = d.name; dev.appendChild(o); }
+dev.value = 'membrane_PC'; phen.value = 'MCF-7';
+let mode = 'strain';
+$('m-strain').onclick = () => { mode = 'strain'; $('m-strain').classList.add('on'); $('m-comp').classList.remove('on'); };
+$('m-comp').onclick = () => { mode = 'comp'; $('m-comp').classList.add('on'); $('m-strain').classList.remove('on'); };
+const selected = () => DATA.phenotypes.find(x => x.id === phen.value);
+
+function loadPhenotype() {
+  const p = selected();
+  if (p) { $('D').value = p.D; $('E').value = p.E_app; $('gam').value = p.gamma_pN_um; $('tau').value = p.tau; $('source').textContent = p.source; }
+  else $('source').textContent = 'Own values: state their provenance when you use them.';
+  update(true);
+}
+function cell() {
+  const D = +$('D').value, a = D / 2, E = +$('E').value, p = selected();
+  return { D, a, E, Gs: E * a / KE, gamma: (+$('gam').value) / 1000, tau: +$('tau').value, an_a: p ? p.an_a : 0.6 };
+}
+function critical(c, Dap, kdev, N = 6000) {
+  const Rn = Dap / 2, cv = curves[kdev], pf = walls[kdev], conf = c.a / Rn;
+  if (Rn >= c.a) return { dP: 0, conf, state: 'free' };
+  if (Rn / c.a < cv.xmin) return { dP: NaN, conf, state: 'out' };
+  const dP = DATA.devices[kdev].type === 'channel' ? dPlocal(pf, Rn, c.a, c.Gs, cv, N) : dPwork(Rn, c.a, c.Gs, cv);
+  return { dP, conf, state: conf <= RANGE ? 'inside' : 'extrapolated' };
+}
+const fmt = v => !isFinite(v) ? '—' : v === 0 ? '0' : v < 0.01 ? v.toExponential(2) : v < 10 ? v.toFixed(3) : v.toFixed(1);
+
+let res = null, anim = { on: false, z: null, stopped: false }, path = null;
+function update(resetAnim) {
+  const c = cell(), Dap = +$('ap').value, P = 10 ** (+$('pr').value);
+  $('apv').textContent = Dap.toFixed(2) + ' µm'; $('prv').textContent = fmt(P) + ' kPa';
+  res = critical(c, Dap, dev.value);
+  $('pc').textContent = res.state === 'out' ? 'not computed' : fmt(res.dP) + ' kPa';
+  $('pg').textContent = c.gamma ? fmt(dPdrop(Dap / 2, c.a, c.gamma)) + ' kPa' : 'no γ measured';
+  $('cf').textContent = res.conf.toFixed(2);
+  const Lc = walls[dev.value].zt + walls[dev.value].L;
+  $('bc').textContent = (res.state === 'out' || !c.tau) ? '—' : fmt(res.dP * c.tau / Lc * 1000) + ' kPa·s/mm';
+  const v = $('verdict'), f = $('flag');
+  if (res.state === 'free') { v.className = 'verdict free'; v.textContent = 'Passes without touching the wall: the aperture is wider than the cell.'; }
+  else if (res.state === 'out') { v.className = 'verdict stop'; v.textContent = 'Confinement above 2.4: outside the computed finite-element range.'; }
+  else if (P >= res.dP) { v.className = 'verdict pass'; v.textContent = 'Passes: the applied pressure exceeds the critical entry pressure.'; }
+  else { v.className = 'verdict stop'; v.textContent = 'Retained: the applied pressure is below the critical entry pressure.'; }
+  f.className = 'flag ' + ({ free: 'ok', inside: 'ok', extrapolated: 'warn', out: 'bad' }[res.state]);
+  f.textContent = { free: 'No wall contact.', inside: 'Inside the assessed confinement range (a/R ≤ 1.636).',
+    extrapolated: 'Above the assessed range: extrapolation up to a/R = 2.4.', out: 'The tabulated finite-element states do not reach this confinement.' }[res.state];
+  if (resetAnim) { path = buildPath(); anim.z = path.z0; anim.stopped = false; anim.on = true; $('play').textContent = 'Pause'; }   // the cell enters from upstream
+  drawChart(c, Dap, P);
+}
+
+// ---- colour map (cividis-like, colour-blind safe)
+const CMAP = [[0, [0, 32, 77]], [0.25, [65, 77, 107]], [0.5, [124, 123, 120]], [0.75, [188, 175, 111]], [1, [255, 233, 69]]];
+const SCALE = s => Math.min(Math.max(s, 0) / (Math.max(s, 0) + 1), 5 / 6) * 1.2;   // 0, 0.5, 1, 2, >=5 -> 0, .4, .6, .8, 1
+function cmap(s) {
+  const x = SCALE(s);
+  for (let i = 0; i < CMAP.length - 1; i++) if (x <= CMAP[i + 1][0]) {
+    const [x0, c0] = CMAP[i], [x1, c1] = CMAP[i + 1], t = (x - x0) / (x1 - x0);
+    return `rgb(${c0.map((v, k) => Math.round(v + t * (c1[k] - v))).join(',')})`;
+  }
+  return 'rgb(255,233,69)';
+}
+
+// ---- finite-element state at a confinement (linear interpolation between stored states)
+function state(refName, kdev, conf) {
+  const ref = SHAPES.cells[refName], d = ref.devices[kdev], cs = d.conf;
+  if (conf <= cs[0]) return { u: d.u[0], s: d.strain[0], beyond: false };
+  if (conf >= cs[cs.length - 1]) { const n = cs.length - 1; return { u: d.u[n], s: d.strain[n], beyond: conf > cs[n] + 1e-9 }; }
+  let i = 0; while (cs[i + 1] < conf) i++;
+  const t = (conf - cs[i]) / (cs[i + 1] - cs[i]), lerp = (A, B) => A.map((row, k) => Array.isArray(row) ? row.map((v, j) => v + t * (B[k][j] - v)) : row + t * (B[k] - row));
+  return { u: lerp(d.u[i], d.u[i + 1]), s: lerp(d.strain[i], d.strain[i + 1]), beyond: false };
+}
+
+const scope = $('scope'), ctx = scope.getContext('2d');
+function fit(cv) { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); return d; }
+function drawScope() {
+  const d = fit(scope), W = scope.width, H = scope.height, c = cell(), Dap = +$('ap').value, Rn = Dap / 2;
+  const pf = walls[dev.value], zc = anim.z === null ? 0 : anim.z, Rshow = Rn;
+  const conf = Math.max(c.a / pf.Rw(zc, Rn), 1);
+  const span = Math.max(halfPath(c, pf) + 1.2 * c.a, 22), esc = Math.min(W / (2 * span), H / (2 * Math.max(c.a * 1.35, Rshow * 1.6, 9)));
+  const cx = W / 2, cy = H / 2, X = z => cx + z * esc, Y = r => cy - r * esc;
+  const g = ctx.createRadialGradient(cx, cy, H * 0.1, cx, cy, W * 0.62);
+  g.addColorStop(0, css('--field-a')); g.addColorStop(1, css('--field-b')); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // wall of the device at the displayed aperture
+  ctx.fillStyle = css('--wall'); ctx.strokeStyle = css('--wall-edge'); ctx.lineWidth = 1.2 * d;
+  const zs = []; for (let k = -240; k <= 240; k++) zs.push(span * k / 240);
+  for (const sg of [1, -1]) {
+    ctx.beginPath(); ctx.moveTo(X(zs[0]), Y(sg * 200));
+    zs.forEach(z => ctx.lineTo(X(z), Y(sg * Math.min(pf.Rw(z, Rshow), 200)))); ctx.lineTo(X(zs[zs.length - 1]), Y(sg * 200)); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); zs.forEach((z, i) => { const yy = Y(sg * pf.Rw(z, Rshow)); i ? ctx.lineTo(X(z), yy) : ctx.moveTo(X(z), yy); }); ctx.stroke();
+  }
+  // cell: computed finite-element state, rescaled to the selected diameter
+  const refName = c.an_a >= 0.58 ? 'leucocyte' : 'tumour', ref = SHAPES.cells[refName];
+  const st = state(refName, dev.value, conf), P = ref.mesh.p, T = ref.mesh.t, nt = T[0].length, a = c.a;
+  const xr = P[0].map((v, i) => (v + st.u[0][i]) * a), xz = P[1].map((v, i) => (v + st.u[1][i]) * a);
+  const eos = css('--eosin'), hem = css('--hema');
+  for (const [sr, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    for (let e = 0; e < nt; e++) {
+      const i = T[0][e], j = T[1][e], k = T[2][e];
+      const col = mode === 'strain' ? cmap(st.s[e]) : (ref.mesh.nucleus[e] ? hem : eos);
+      ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 0.6 * d;
+      ctx.beginPath(); ctx.moveTo(X(zc + sz * xz[i]), Y(sr * xr[i])); ctx.lineTo(X(zc + sz * xz[j]), Y(sr * xr[j])); ctx.lineTo(X(zc + sz * xz[k]), Y(sr * xr[k])); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    for (const [edges, w] of [[ref.outer, 1.6], [ref.iface, 1.1]]) {
+      ctx.strokeStyle = css('--edge'); ctx.lineWidth = w * d; ctx.beginPath();
+      for (const [p1, p2] of edges) { ctx.moveTo(X(zc + sz * xz[p1]), Y(sr * xr[p1])); ctx.lineTo(X(zc + sz * xz[p2]), Y(sr * xr[p2])); }
+      ctx.stroke();
+    }
+  }
+  // axis, scale bar
+  ctx.setLineDash([4 * d, 4 * d]); ctx.strokeStyle = css('--ink2'); ctx.globalAlpha = 0.5; ctx.lineWidth = 1 * d;
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  ctx.fillStyle = css('--ink'); const sb = 10 * esc; ctx.fillRect(W - sb - 18 * d, H - 22 * d, sb, 2 * d);
+  ctx.font = `${11 * d}px "IBM Plex Mono", monospace`; ctx.fillText('10 µm', W - sb - 18 * d, H - 28 * d);
+  $('hud').textContent = `${phen.options[phen.selectedIndex].text} · ${c.D.toFixed(1)} µm · aperture ${(2 * Rshow).toFixed(2)} µm · local a/R = ${conf.toFixed(2)}`
+    + (anim.z === null ? '' : (anim.z < -0.5 && !anim.stopped && conf <= 1.0001 ? ' · approaching the constriction' : ` · position ${zc.toFixed(1)} µm`)) + (anim.stopped ? ' · retained here' : '')
+    + (st.beyond ? ' (largest computed state shown)' : '');
+  $('lb').innerHTML = mode === 'strain'
+    ? `equivalent strain<div class="bar" style="background:linear-gradient(90deg,${[0, .5, 1, 2, 5].map(v => cmap(v)).join(',')})"></div><span class="mono">0 · 0.5 · 1 · 2 · ≥5</span>`
+    : `<span style="color:${eos}">■</span> cytoplasm &nbsp;<span style="color:${hem}">■</span> nucleus`;
+}
+
+// ---- chart: critical pressure against aperture
+const chart = $('chart'), cx2 = chart.getContext('2d');
+function drawChart(c, Dap, P) {
+  const d = fit(chart), W = chart.width, H = chart.height, m = { l: 58 * d, r: 14 * d, t: 12 * d, b: 34 * d }, ylo = -3, yhi = 2;
+  cx2.clearRect(0, 0, W, H);
+  const X = D => m.l + (D - 5) / 10 * (W - m.l - m.r), Y = v => m.t + (yhi - Math.log10(v)) / (yhi - ylo) * (H - m.t - m.b);
+  cx2.strokeStyle = css('--line'); cx2.fillStyle = css('--ink2'); cx2.lineWidth = d; cx2.font = `${11 * d}px "IBM Plex Sans", sans-serif`;
+  for (let e = ylo; e <= yhi; e++) { const y = Y(10 ** e); cx2.beginPath(); cx2.moveTo(m.l, y); cx2.lineTo(W - m.r, y); cx2.stroke(); cx2.fillText(`10${e < 0 ? '⁻' : ''}${'⁰¹²³'[Math.abs(e)]}`, 8 * d, y + 4 * d); }
+  for (let D = 5; D <= 15; D++) cx2.fillText(String(D), X(D) - 4 * d, H - 16 * d);
+  cx2.fillText('aperture diameter (µm)', W / 2 - 60 * d, H - 3 * d);
+  cx2.save(); cx2.translate(12 * d, H / 2 + 28 * d); cx2.rotate(-Math.PI / 2); cx2.fillText('kPa', 0, 0); cx2.restore();
+  const series = (cel, color, w) => {
+    cx2.strokeStyle = color; cx2.lineWidth = w * d; cx2.beginPath(); let on = false;
+    for (let D = 5; D <= 15.001; D += 0.1) { const r = critical(cel, D, dev.value, 800);
+      if (!(r.dP > 0) || !isFinite(r.dP)) { on = false; continue; }
+      const y = Y(Math.min(Math.max(r.dP, 10 ** ylo), 10 ** yhi)); on ? cx2.lineTo(X(D), y) : cx2.moveTo(X(D), y); on = true; }
+    cx2.stroke();
+  };
+  const ref = id => { const p = DATA.phenotypes.find(x => x.id === id); return { a: p.D / 2, Gs: p.E_app * p.D / 2 / KE }; };
+  series(ref('neutrophil'), css('--leu-line'), 1.6); series(ref('MCF-7'), css('--tumour-line'), 1.6); series(c, css('--sel-line'), 2.4);
+  cx2.setLineDash([5 * d, 4 * d]); cx2.strokeStyle = css('--accent'); cx2.lineWidth = 1.5 * d;
+  cx2.beginPath(); cx2.moveTo(m.l, Y(P)); cx2.lineTo(W - m.r, Y(P)); cx2.stroke(); cx2.setLineDash([]);
+  cx2.strokeStyle = css('--ink'); cx2.beginPath(); cx2.moveTo(X(Dap), m.t); cx2.lineTo(X(Dap), H - m.b); cx2.stroke();
+}
+
+// ---- passage: quasi-static advance along the axis (same approximation as the critical pressure)
+function halfPath(c, pf) { return pf.zt + 4 * pf.L + 1.3 * c.a; }
+function buildPath() {
+  const c = cell(), Rn = +$('ap').value / 2, pf = walls[dev.value], cv = curves[dev.value], P = 10 ** (+$('pr').value);
+  const z0 = -halfPath(c, pf), N = 600, zs = [], q = []; let qmax = 0;
+  for (let k = 0; k <= N; k++) {
+    const z = z0 * (1 - k / N), R = pf.Rw(z, Rn), u = R / c.a; let v = 0;
+    if (R < c.a) v = u < cv.xmin ? Infinity : c.Gs * c.a * Math.abs(cv.df(u)) * Math.abs(pf.dRw(Math.abs(z), Rn)) / (Math.PI * R * R);
+    zs.push(z); q.push(v); if (isFinite(v)) qmax = Math.max(qmax, v);
+  }
+  // membranes report the work estimate: scale the resisting profile so that its maximum equals the reported value
+  const kf = (qmax > 0 && isFinite(res.dP) && res.dP > 0) ? res.dP / qmax : 1;
+  const qs = q.map(v => kf * v);
+  let zstop = null;
+  if (res.state !== 'free') for (let k = 0; k <= N; k++) if (qs[k] >= P) { zstop = zs[k]; break; }
+  return { z0, zs, q: qs, zstop, P };
+}
+function qAt(z) {
+  if (!path || z >= 0) return 0;
+  const N = path.zs.length - 1, k = Math.min(N, Math.max(0, Math.round((1 - z / path.z0) * N)));
+  return path.q[k];
+}
+let last = 0;
+function loop(t) {
+  const dt = Math.min((t - last) / 1000, 0.05); last = t;
+  if (anim.on && path) {
+    const v = 2 * Math.abs(path.z0) / 4.5;                     // about 4.5 s to cross when unimpeded
+    const f = anim.z < 0 ? Math.max(0.12, 1 - qAt(anim.z) / path.P) : 1;
+    anim.z += v * f * dt;
+    if (path.zstop !== null && anim.z >= path.zstop) { anim.z = path.zstop; anim.on = false; anim.stopped = true; $('play').textContent = 'Animate passage'; }
+    else if (anim.z >= -path.z0) { anim.on = false; $('play').textContent = 'Animate passage'; }
+  }
+  drawScope(); requestAnimationFrame(loop);
+}
+$('play').onclick = () => {
+  if (anim.on) { anim.on = false; $('play').textContent = 'Animate passage'; return; }
+  path = buildPath();
+  if (anim.z === null || anim.stopped || anim.z >= -path.z0) anim.z = path.z0;
+  anim.stopped = false; anim.on = true; $('play').textContent = 'Pause';
+};
+$('reset').onclick = () => { path = buildPath(); anim.z = path.z0; anim.on = false; anim.stopped = false; $('play').textContent = 'Animate passage'; };
+phen.onchange = loadPhenotype;
+for (const id of ['D', 'E', 'gam', 'tau']) $(id).oninput = () => { if (phen.value !== 'custom') phen.value = 'custom'; update(true); };
+dev.onchange = () => update(true); $('ap').oninput = () => update(true);
+$('pr').oninput = () => {                 // raising the pressure on a retained cell pushes it on
+  update(false);
+  if (anim.z !== null) { path = buildPath(); if (anim.stopped && (path.zstop === null || path.zstop > anim.z + 1e-9)) { anim.stopped = false; anim.on = true; $('play').textContent = 'Pause'; } }
+};
+window.addEventListener('resize', () => update(false));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => update(false));
+loadPhenotype(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

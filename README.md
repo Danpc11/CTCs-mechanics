@@ -13,7 +13,7 @@ A computational proof of concept parameterised with published measurements of br
 
 | folder | contents |
 |---|---|
-| `manuscript_analysis/` | Analysis behind the manuscript: solver and its verification (`01_solver`), parameter table with provenance (`02_parametros`), constriction, DLD and rate analysis (`03_modalidades`), per-population sensitivity analysis (`04_correcciones`), figures (`05_figuras`), chip hydraulics (`06_hidraulica_chip`), reduction to critical pressure and re-run finite-element data (`07_correccion_reduccion`), patient-derived CTC size analysis (`08_ctc_paciente`) and all tables (`datos/`). |
+| `manuscript_analysis/` | Analysis behind the manuscript: solver and its verification (`01_solver`), parameter table with provenance (`02_parametros`), constriction, DLD and rate analysis (`03_modalidades`), per-population sensitivity analysis (`04_correcciones`), figures (`05_figuras`), chip hydraulics (`06_hidraulica_chip`), reduction to critical pressure and re-run finite-element data (`07_correccion_reduccion`), patient-derived CTC size analysis (`08_ctc_paciente`), operating windows as flow rates in µL/min (`09_flow_units`) and all tables (`datos/`). |
 | `src/ctcfem/` | Package for population and device runs (primary leucocyte subpopulations, membranes and channels, apertures of 5–15 µm) with resumable, fault-tolerant parallel execution and a run manifest. |
 | `data/` | Population distributions and device/material data; every entry has a status (measured, transferred, declared, derived) and a source. |
 | `configs/` | Run configurations (smoke test, mesh convergence, full run). |
@@ -32,6 +32,12 @@ make figures       # manuscript figures -> figures/
 
 Full run (e.g. 20 cores, in byobu or tmux): `python -m ctcfem.cli run --config configs/full.yaml --workers 20`,
 then `python -m ctcfem.cli analyze --config configs/full.yaml`. See `docs/USAGE.md`.
+
+## Re-running the manuscript analysis
+
+`bash scripts/rerun_manuscript.sh 20 1e5` re-runs every finite-element sweep and analysis of `manuscript_analysis/` with the
+volume-conserving bulk modulus (kappa/mu = 1e5) in a separate working copy (`rerun_k1e5/`), regenerates the figures and writes
+`rerun_k1e5.tar.gz` with a summary (`SUMMARY.txt`), the tables, the figures and the logs. The deposited results are not modified.
 
 ## Model notes
 

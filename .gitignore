@@ -1,7 +1,10 @@
-resultados/
-manuscript_analysis/05_figuras/salida/
+results/
 __pycache__/
 *.pyc
 .pytest_cache/
 *.tmp
 .DS_Store
+manuscript_analysis/05_figuras/salida/
+rerun_k*/
+rerun_k*.tar.gz
+resultados_*.tar.gz
